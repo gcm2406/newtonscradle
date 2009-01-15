@@ -49,7 +49,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
     	private double angleOfGravityVelocity = -3.2;
         private static final float BALL_WEIGHT = 0.3f;
        	private boolean mObjectHit = false;
-    	private int mObjectHitId =-1;;
+    	private int mObjectHitId =-1;
     	private boolean isSoundOn = true;
 
         private double[] mBallVelocity=new double[mNumberOfBalls];//, approximate velocity at step i 
@@ -62,7 +62,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         private int mBallHeight;
         private int mBallHalfWidth;
         private Paint mLinePaint;
-        private MediaPlayer[] mBallSounds = new MediaPlayer[mNumberOfBalls];
+       // private MediaPlayer[] mBallSounds = new MediaPlayer[mNumberOfBalls];
         
         public BallsThread(SurfaceHolder surfaceHolder, Context app) {
             // get handles to some important objects
@@ -90,7 +90,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
             	mBallCenterY[i] = mCenterOfRotationY+mStringLength;
             	mBallVelocity[i]=0;
             	mBallAngle[i]=-3.2; //start angle of balls
-            	mBallSounds[i] = MediaPlayer.create(app, R.raw.clink);
+            	//mBallSounds[i] = MediaPlayer.create(app, R.raw.clink);
             }
         }
 
@@ -191,7 +191,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 
 		        			//for 2 balls to collide they must be at the same angle, fix overlaps by doing this.
 		        			mBallAngle[i] = mBallAngle[j];
-		        			
+		        			/*
 		        			if(isSoundOn && mBallSounds[j]!=null && !mBallSounds[j].isPlaying())
 		        			{
 		        				//mSound.seekTo(0);
@@ -199,7 +199,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 		        				if(vol >1) vol=1;
 		        				mBallSounds[j].setVolume(vol, vol);
 		        				mBallSounds[j].start();
-		        			}
+		        			}*/
 		        			
 		        		}
 		        	}
@@ -236,10 +236,8 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
     			float gravityOffsetY = -values[0];
 
     			//sort out the changed angle of gravity, the Y Offset switch is due to the graph of tan(theta) jumping
-    			if(gravityOffsetY>0) angleOfGravityVelocity = -Math.atan(gravityOffsetX/gravityOffsetY) -(Math.PI);
-    			else angleOfGravityVelocity = -Math.atan(gravityOffsetX/gravityOffsetY);
-    			
-    			//mApp.notify(" gx:" + gravityOffsetX + " gy: "+gravityOffsetY);
+    			if(gravityOffsetY>0) angleOfGravityVelocity = -Math.atan(gravityOffsetX/gravityOffsetY)-Math.PI/2;
+    			else angleOfGravityVelocity = -Math.atan(gravityOffsetX/gravityOffsetY)+(Math.PI/2);
      		}
     	}
 

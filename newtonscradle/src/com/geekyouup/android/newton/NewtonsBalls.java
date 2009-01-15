@@ -65,14 +65,6 @@ public class NewtonsBalls extends Activity {
     }
     
     @Override
-    protected void onResume() {
-        super.onResume();
-        mSensorManager.registerListener(mBallsThread,
-                SensorManager.SENSOR_ALL,
-                SensorManager.SENSOR_DELAY_UI);
-    }
-    
-    @Override
     public boolean onOptionsItemSelected(MenuItem item) {
     	if(item.getItemId() == MENU_TOGGLESOUND)
     	{
@@ -129,6 +121,14 @@ public class NewtonsBalls extends Activity {
         super.onPause();
         mSensorManager.unregisterListener(mBallsThread);
         finish(); //cause app not to run in background
+    }
+    
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mSensorManager.registerListener(mBallsThread,
+                SensorManager.SENSOR_ACCELEROMETER,
+                SensorManager.SENSOR_DELAY_UI);
     }
     
     /**
