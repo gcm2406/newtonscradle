@@ -120,7 +120,7 @@ public class NewtonsBalls extends Activity {
     protected void onPause() {
         super.onPause();
         mSensorManager.unregisterListener(mBallsThread);
-        finish(); //cause app not to run in background
+        //finish(); //cause app not to run in background
     }
     
     @Override

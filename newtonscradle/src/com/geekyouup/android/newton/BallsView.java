@@ -62,7 +62,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         private int mBallHeight;
         private int mBallHalfWidth;
         private Paint mLinePaint;
-       // private MediaPlayer[] mBallSounds = new MediaPlayer[mNumberOfBalls];
+        private MediaPlayer[] mBallSounds = new MediaPlayer[mNumberOfBalls];
         
         public BallsThread(SurfaceHolder surfaceHolder, Context app) {
             // get handles to some important objects
@@ -90,7 +90,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
             	mBallCenterY[i] = mCenterOfRotationY+mStringLength;
             	mBallVelocity[i]=0;
             	mBallAngle[i]=-3.2; //start angle of balls
-            	//mBallSounds[i] = MediaPlayer.create(app, R.raw.clink);
+            	mBallSounds[i] = MediaPlayer.create(app, R.raw.clink);
             }
         }
 
@@ -191,7 +191,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 
 		        			//for 2 balls to collide they must be at the same angle, fix overlaps by doing this.
 		        			mBallAngle[i] = mBallAngle[j];
-		        			/*
+		        			
 		        			if(isSoundOn && mBallSounds[j]!=null && !mBallSounds[j].isPlaying())
 		        			{
 		        				//mSound.seekTo(0);
@@ -199,7 +199,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 		        				if(vol >1) vol=1;
 		        				mBallSounds[j].setVolume(vol, vol);
 		        				mBallSounds[j].start();
-		        			}*/
+		        			}
 		        			
 		        		}
 		        	}
