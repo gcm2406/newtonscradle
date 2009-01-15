@@ -33,9 +33,9 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         /** What to draw for the Lander when it has crashed */
         private Drawable mBall;
         private Bitmap mBackgroundImage;
-        private int mMode;
         private boolean mRun = false;
         private SurfaceHolder mSurfaceHolder;
+        private boolean mRunning = false;
 
         
         int mNumberOfBalls = 5;
@@ -47,7 +47,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         private double[] mBallCenterY=new double[mNumberOfBalls];//{220};
         private double[] angularVelocity=new double[mNumberOfBalls]; // POSITIVE = CLOCKWISE, NEG=ANTICLOCK
     	private double angleOfGravityVelocity = -3.2;
-        private static final float BALL_WEIGHT = 0.4f;
+        private static final float BALL_WEIGHT = 0.3f;
        	private boolean mObjectHit = false;
     	private int mObjectHitId =-1;;
     	private boolean isSoundOn = true;
@@ -100,29 +100,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         public void doStart() {
             synchronized (mSurfaceHolder) {
                 //mLastTime = System.currentTimeMillis() + 100;
-                setState(STATE_RUNNING);
-            }
-        }
-
-        /**
-         * Pauses the physics update & animation.
-         */
-        public void pause() {
-            synchronized (mSurfaceHolder) {
-                if (mMode == STATE_RUNNING) setState(STATE_PAUSE);
-            }
-        }
-
-        /**
-         * Restores game state from the indicated Bundle. Typically called when
-         * the Activity is being restored after having been previously
-         * destroyed.
-         * 
-         * @param savedState Bundle containing the game state
-         */
-        public synchronized void restoreState(Bundle savedState) {
-            synchronized (mSurfaceHolder) {
-                setState(STATE_PAUSE);
+            	mRunning=true;
             }
         }
 
@@ -133,9 +111,11 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
                 try {
                     c = mSurfaceHolder.lockCanvas(null);
                     synchronized (mSurfaceHolder) {
-                        //if (mMode == STATE_RUNNING) 
-                    	updatePhysics();
-                        doDraw(c);
+                    	if(mRunning)
+                    	{
+	                    	updatePhysics();
+	                        doDraw(c);
+                    	}
                     }
                 } finally {
                     // do this in a finally so that if an exception is thrown
@@ -159,69 +139,8 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
             mRun = b;
         }
 
-        /**
-         * Sets the game mode. That is, whether we are running, paused, in the
-         * failure state, in the victory state, etc.
-         * 
-         * @see #setState(int, CharSequence)
-         * @param mode one of the STATE_* constants
-         */
-        public void setState(int mode) {
-            synchronized (mSurfaceHolder) {
-                setState(mode, null);
-            }
-        }
-
-        /**
-         * Sets the game mode. That is, whether we are running, paused, in the
-         * failure state, in the victory state, etc.
-         * 
-         * @param mode one of the STATE_* constants
-         * @param message string to add to screen or null
-         */
-        public void setState(int mode, CharSequence message) {
-            /*
-             * This method optionally can cause a text message to be displayed
-             * to the user when the mode changes. Since the View that actually
-             * renders that text is part of the main View hierarchy and not
-             * owned by this thread, we can't touch the state of that View.
-             * Instead we use a Message + Handler to relay commands to the main
-             * thread, which updates the user-text View.
-             */
-            synchronized (mSurfaceHolder) {
-                mMode = mode;
-
-                if (mMode == STATE_RUNNING) {
-                    //Message msg = mHandler.obtainMessage();
-                    Bundle b = new Bundle();
-                    b.putString("text", "");
-                    b.putInt("viz", View.INVISIBLE);
-                   // msg.setData(b);
-                   // mHandler.sendMessage(msg);
-                } else {
-                   // Message msg = mHandler.obtainMessage();
-                    Bundle b = new Bundle();
-                    b.putString("text", "Newtons Cradle");
-                    b.putInt("viz", View.VISIBLE);
-                   // msg.setData(b);
-                   // mHandler.sendMessage(msg);
-                }
-            }
-        }
-
         /* Callback invoked when the surface dimensions change. */
         public void setSurfaceSize(int width, int height) {}
-
-        /**
-         * Resumes from a pause.
-         */
-        public void unpause() {
-            // Move the real time clock up to now
-            synchronized (mSurfaceHolder) {
-                //mLastTime = System.currentTimeMillis() + 100;
-            }
-            setState(STATE_RUNNING);
-        }
 
         /**
          * Draws the ship, fuel/speed bars, and background to the provided

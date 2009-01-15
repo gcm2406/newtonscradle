@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.hardware.SensorManager;
 import android.os.Bundle;
@@ -25,6 +26,8 @@ public class NewtonsBalls extends Activity {
     private static final int MENU_EXIT = 2;
     private static final int DIALOG_WELCOME=0;
     private boolean isSoundOn = true;
+    private static final String PREFS_NAME ="GYUNEWTON";
+    private static final String PREFS_SOUND ="SOUNDON";
     
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -39,7 +42,16 @@ public class NewtonsBalls extends Activity {
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         // get handles to the LunarView from XML, and its LunarThread
         mBallsView = (BallsView) findViewById(R.id.myBalls);
-        mBallsThread = mBallsView.getThread();        
+        mBallsThread = mBallsView.getThread();
+        
+        //Make sure the welcome message only appears on first launch
+        SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+        if(settings !=null)
+        {
+     	   isSoundOn = settings.getBoolean(PREFS_SOUND, true);
+     	   mBallsThread.setSoundState(isSoundOn);
+        }
+        
         mBallsThread.doStart();
     }
     
@@ -66,7 +78,17 @@ public class NewtonsBalls extends Activity {
     	{
     		isSoundOn = !isSoundOn;
     		mBallsThread.setSoundState(isSoundOn);
+    		
     		Toast.makeText(this, "Sound " + (isSoundOn?"on":"off"), Toast.LENGTH_SHORT).show();
+    		
+            //Make sure the welcome message only appears on first launch
+            SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+            if(settings !=null)
+            {
+	           SharedPreferences.Editor editor = settings.edit();
+	           editor.putBoolean(PREFS_SOUND, isSoundOn);
+	           editor.commit();
+            }
     		return true;
     	}else if(item.getItemId() == MENU_ABOUT)
    	 	{
@@ -106,7 +128,7 @@ public class NewtonsBalls extends Activity {
     protected void onPause() {
         super.onPause();
         mSensorManager.unregisterListener(mBallsThread);
-        mBallsView.getThread().pause(); // pause game when Activity pauses
+        finish(); //cause app not to run in background
     }
     
     /**
