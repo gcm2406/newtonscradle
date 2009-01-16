@@ -25,7 +25,7 @@ public class NewtonsBalls extends Activity {
     private static final int MENU_BALLS = 2;
     private static final int MENU_EXIT = 3;
     private static final int DIALOG_WELCOME=0;
-    private boolean isSoundOn = true;
+    private boolean isSoundOn = false;
     private static final String PREFS_NAME ="GYUNEWTON";
     private static final String PREFS_SOUND ="SOUNDON";
     
@@ -44,7 +44,7 @@ public class NewtonsBalls extends Activity {
         SharedPreferences settings = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         if(settings !=null)
         {
-     	   isSoundOn = settings.getBoolean(PREFS_SOUND, true);
+     	   isSoundOn = settings.getBoolean(PREFS_SOUND, false);
      	   mBallsThread.setSoundState(isSoundOn);
         }
     }

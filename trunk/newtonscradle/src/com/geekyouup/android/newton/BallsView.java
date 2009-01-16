@@ -50,7 +50,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         private static final float BALL_WEIGHT = 0.3f;
        	private boolean mObjectTouched = false;
     	private int mObjectTouchedId =-1;
-    	private boolean isSoundOn = true;
+    	private boolean isSoundOn = false;
 
         private double[] mBallVelocity=new double[mNumberOfBalls];//, approximate velocity at step i 
         private double[] mBallAngle=new double[mNumberOfBalls];//0.4;//, approximate angular displacement at step i 
