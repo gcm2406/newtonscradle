@@ -39,23 +39,23 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         
         int mNumberOfBalls = 5;
         final int mFixedBallWidth = 56;
-        //rot centers
-        private final float[] mCenterOfRotationX=new float[]{240-mFixedBallWidth*2,240-mFixedBallWidth,240,240+mFixedBallWidth,240+mFixedBallWidth*2};
-        private final float mCenterOfRotationY=35;//
-        private double[] mBallCenterX=new double[mNumberOfBalls];//{100};
-        private double[] mBallCenterY=new double[mNumberOfBalls];//{220};
+        //rot centers should be calculated based on number of balls, currently hardcoded = bad
+        private final int[] mCenterOfRotationX=new int[]{240-mFixedBallWidth*2,240-mFixedBallWidth,240,240+mFixedBallWidth,240+mFixedBallWidth*2};
+        private final int mCenterOfRotationY=35;//
+        private int[] mBallCenterX=new int[mNumberOfBalls];//{100};
+        private int[] mBallCenterY=new int[mNumberOfBalls];//{220};
         private double[] angularVelocity=new double[mNumberOfBalls]; // POSITIVE = CLOCKWISE, NEG=ANTICLOCK
     	private double angleOfGravityVelocity = -3.2;
         private static final float BALL_WEIGHT = 0.3f;
-       	private boolean mObjectHit = false;
-    	private int mObjectHitId =-1;
+       	private boolean mObjectTouched = false;
+    	private int mObjectTouchedId =-1;
     	private boolean isSoundOn = true;
 
         private double[] mBallVelocity=new double[mNumberOfBalls];//, approximate velocity at step i 
         private double[] mBallAngle=new double[mNumberOfBalls];//0.4;//, approximate angular displacement at step i 
      	final double g=SensorManager.STANDARD_GRAVITY;  // set gravitational acceleration parameter
      	final double L=1;//, length of pendulum (input variable) 
-		public static final double mStringLength=180; //pixels
+		public static final int mStringLength=180; //pixels
         
         private int mBallWidth;
         private int mBallHeight;
@@ -102,28 +102,35 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
             	mRunning=true;
             }
         }
+        
+        public void doPause() {
+            synchronized (mSurfaceHolder) {
+                //mLastTime = System.currentTimeMillis() + 100;
+            	mRunning=false;
+            }
+        }
 
         @Override
         public void run() {
             while (mRun) {
-                Canvas c = null;
-                try {
-                    c = mSurfaceHolder.lockCanvas(null);
-                    synchronized (mSurfaceHolder) {
-                    	if(mRunning)
-                    	{
-	                    	updatePhysics();
-	                        doDraw(c);
-                    	}
-                    }
-                } finally {
-                    // do this in a finally so that if an exception is thrown
-                    // during the above, we don't leave the Surface in an
-                    // inconsistent state
-                    if (c != null) {
-                        mSurfaceHolder.unlockCanvasAndPost(c);
-                    }
-                }
+            	if(mRunning)
+            	{
+	                Canvas c = null;
+	                try {
+		                    c = mSurfaceHolder.lockCanvas(null);
+		                    synchronized (mSurfaceHolder) {
+			                    	updatePhysics();
+			                        doDraw(c);
+		                    }
+	                } finally {
+	                    // do this in a finally so that if an exception is thrown
+	                    // during the above, we don't leave the Surface in an
+	                    // inconsistent state
+	                    if (c != null) {
+	                        mSurfaceHolder.unlockCanvasAndPost(c);
+	                    }
+	                }
+            	}
             }
         }
         /**
@@ -152,8 +159,8 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         	canvas.drawBitmap(mBackgroundImage, 0, 0, null);
     		for(int i=0;i<mNumberOfBalls;i++)
     		{
-	            int yTop = (int) mBallCenterY[i] - mBallHalfWidth;
-	            int xLeft = (int) mBallCenterX[i] - mBallHalfWidth;
+	            int yTop = (int) (mBallCenterY[i] - mBallHalfWidth);
+	            int xLeft = (int) (mBallCenterX[i] - mBallHalfWidth);
 	
 	            canvas.drawLine(mCenterOfRotationX[i], mCenterOfRotationY,  xLeft + mBallHalfWidth, yTop+mBallHalfWidth, mLinePaint);
 	
@@ -162,9 +169,9 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
     		}
         }
         
-        public void setSoundState(boolean soundOn)
+        public void setSoundState(boolean soundState)
         {
-        	this.isSoundOn = soundOn;
+        	this.isSoundOn = soundState;
         }
         
         private void updatePhysics() {
@@ -172,40 +179,10 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         		//do the collision detection
         		for(int i=0;i<mNumberOfBalls;i++)
         		{
-		        	//hitTest
-		        	for(int j=0;j<mNumberOfBalls;j++)
-		        	{
-		        		if(i==j) continue; //skip hit test with self
-		        		
-		        		//if distance between the 2 centers of the balls is <= to ball width then switch their momentums
-		        		double mDistBetweenBalls = Math.sqrt((Math.pow(mBallCenterX[j]-mBallCenterX[i],2)
-		        										+Math.pow(mBallCenterY[j]-mBallCenterY[i], 2)));
-		        		//switch between
-		        		if(mDistBetweenBalls<mBallWidth)
-		        		{
-		        			
-		        			double velJ = mBallVelocity[j];
-		        			mBallVelocity[j] = mBallVelocity[i];
-		        			mBallVelocity[i] = velJ;
-
-		        			//for 2 balls to collide they must be at the same angle, fix overlaps by doing this.
-		        			mBallAngle[i] = mBallAngle[j];
-		        			
-		        			if(isSoundOn && mBallSounds[j]!=null && !mBallSounds[j].isPlaying())
-		        			{
-		        				//mSound.seekTo(0);
-		        				float vol = (float) (Math.abs(mBallVelocity[j])+Math.abs(mBallVelocity[i]));
-		        				if(vol >1) vol=1;
-		        				mBallSounds[j].setVolume(vol, vol);
-		        				mBallSounds[j].start();
-		        			}
-		        			
-		        		}
-		        	}
-
-		        	//physics of the balls
-		        	if(!mObjectHit || (mObjectHit && mObjectHitId!=i))
-		        	{
+		        	//physics of the balls for ones not being controlled by touch
+	        		boolean objectControlledByTouch = (mObjectTouched && mObjectTouchedId==i);
+	    		    if(!objectControlledByTouch)
+	    			{
 			            double elapsed = 0.025;//(now-mLastTime);
 			            
 			            //velocity affected by angle of gravity
@@ -215,24 +192,91 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 			            mBallVelocity[i]=mBallVelocity[i]*0.997; //this should be related to square of velocity
 						
 			            mBallAngle[i] = mBallAngle[i] + mBallVelocity[i]*elapsed/L;
-			
-			        	mBallCenterX[i] = Math.sin(mBallAngle[i])*mStringLength + mCenterOfRotationX[i]; 
-			        	mBallCenterY[i] = -Math.cos(mBallAngle[i])*mStringLength + mCenterOfRotationY;
-		        	}
+	    			}
+	    		    
+		        	mBallCenterX[i] = calcXCoordOfBall(i); 
+		        	mBallCenterY[i] = calcYCoordOfBall(i);
+		        	
+        			hitTestBall(i);
         		}
         }
         
+        public void hitTestBall(int testBall) //only need to test 2 surrounding balls really
+        {
+        	//int startPoint = testBall>1?testBall-1:0;
+        	//for(int j=startPoint;j<testBall+1;j++)
+        	for(int j=0;j<mNumberOfBalls;j++)
+        	{
+        		if(testBall==j) continue; //skip hit test with self
+        		
+        		//if distance between the 2 centers of the balls is <= to ball width then switch their momentums
+        		double mDistBetweenBalls = Math.sqrt((Math.pow(mBallCenterX[j]-mBallCenterX[testBall],2)
+        										+Math.pow(mBallCenterY[j]-mBallCenterY[testBall], 2)));
+        		
+        		//tranfer momentum between collided and moving balls
+        		if(mDistBetweenBalls<mBallWidth)
+        		{
+        			if(isSoundOn && mBallSounds[j]!=null && !mBallSounds[j].isPlaying())
+        			{
+        				//mSound.seekTo(0);
+        				float vol = (float) (Math.abs(mBallVelocity[j])+Math.abs(mBallVelocity[testBall]));
+        				if(vol >1) vol=1;
+        				mBallSounds[j].setVolume(vol, vol);
+        				mBallSounds[j].start();
+        			}
+        			
+        			//for 2 balls to collide they must be at the same angle, fix overlaps by doing this.
+        			if(mObjectTouched && mObjectTouchedId==testBall) //ball being touch dragged overrides angles
+        			{
+        				mBallAngle[j] = mBallAngle[testBall];
+        				mBallVelocity[testBall]=0;
+        				mBallVelocity[j]=0;
+        				       				
+    		        	mBallCenterX[j] = calcXCoordOfBall(j); 
+    		        	mBallCenterY[j] = calcYCoordOfBall(j);
+        			}else if(mObjectTouched && (mObjectTouchedId==j || (mObjectTouchedId>testBall && j>testBall) ))
+        			{
+        				mBallAngle[testBall] = mBallAngle[j];
+        				mBallVelocity[testBall]=0;
+        				mBallVelocity[j]=0;
+        				
+    		        	mBallCenterX[testBall] = calcXCoordOfBall(testBall); 
+    		        	mBallCenterY[testBall] = calcYCoordOfBall(testBall);
+        			}else
+        			{
+	        			double velJ = mBallVelocity[j];
+	        			mBallVelocity[j] = mBallVelocity[testBall];
+	        			mBallVelocity[testBall] = velJ;
+        				mBallAngle[j] = mBallAngle[testBall];
+    		        	
+    		        	mBallCenterX[j] = calcXCoordOfBall(j); 
+    		        	mBallCenterY[j] = calcYCoordOfBall(j);
+        			}
+        		}
+        	}
+        }
+        
+        //calculates balls x coordinate based on its angle and string hanging point
+        public int calcXCoordOfBall(int ballId)
+        {
+        	return (int) (Math.sin(mBallAngle[ballId])*mStringLength + mCenterOfRotationX[ballId]);
+        }
+        
+        //calculates balls y coordinate based on its angle and string hanging point
+        public int calcYCoordOfBall(int ballId)
+        {
+        	return (int) (-Math.cos(mBallAngle[ballId])*mStringLength + mCenterOfRotationY);
+        }
         
     	public void onAccuracyChanged(int arg0, int arg1) {}
-
-	
+    	//see if sensor has changed
     	public void onSensorChanged(int sensor, float[] values) {
     		//accelermetion sensor
     		if(sensor == SensorManager.SENSOR_ACCELEROMETER)
     		{
     			//had to switch these round after going landscape
-    			float gravityOffsetX = -values[1];
-    			float gravityOffsetY = -values[0];
+    			float gravityOffsetX = -values[3]; //use non orientation effected values
+    			float gravityOffsetY = values[4];
 
     			//sort out the changed angle of gravity, the Y Offset switch is due to the graph of tan(theta) jumping
     			if(gravityOffsetY>0) angleOfGravityVelocity = -Math.atan(gravityOffsetX/gravityOffsetY)-Math.PI/2;
@@ -247,78 +291,39 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 				float touchX = event.getX();
 				float touchY = event.getY();
 				
+				//has the user touched a ball?
 				for(int i=0;i<mNumberOfBalls;i++)
 				{
 					//the ball is currently covers mBallX, mBallY to mBallX+mBallWidth, mBallY+mBallHeight
 					if(touchX>=mBallCenterX[i]-mBallHalfWidth && touchX<=(mBallCenterX[i]+mBallHalfWidth)
 						&& touchY>=mBallCenterY[i]-mBallHalfWidth && touchY <= (mBallCenterY[i]+mBallHalfWidth))
 					{
-						mObjectHit=true;
-						mObjectHitId = i;
+						//if so set flag and id of ball touched
+						mObjectTouched=true;
+						mObjectTouchedId = i;
 						return true;
 					}
 				}
 			}else if(event.getAction() == MotionEvent.ACTION_MOVE)
 			{
-				if(mObjectHit)
+				if(mObjectTouched)
 				{
-					mBallCenterX[mObjectHitId] = event.getX();
-					mBallCenterY[mObjectHitId] = event.getY();
+					mBallVelocity[mObjectTouchedId]=0;
 					
 					//translate the roational origin
-					double transX = mBallCenterX[mObjectHitId]-mCenterOfRotationX[mObjectHitId];
-					double transY = mBallCenterY[mObjectHitId]-mCenterOfRotationY;
+					double transX = event.getX()-mCenterOfRotationX[mObjectTouchedId];
+					double transY = event.getY()-mCenterOfRotationY;
 					//figure out the angle
-	    			if(transY>0) mBallAngle[mObjectHitId] = -Math.atan(transX/transY)+Math.PI;
-	    			else mBallAngle[mObjectHitId] = -Math.atan(transX/transY);
+	    			if(transY>0) mBallAngle[mObjectTouchedId] = -Math.atan(transX/transY)+Math.PI;
+	    			else mBallAngle[mObjectTouchedId] = -Math.atan(transX/transY);
 
-		        	mBallCenterX[mObjectHitId] = Math.sin(mBallAngle[mObjectHitId])*mStringLength + mCenterOfRotationX[mObjectHitId]; 
-		        	mBallCenterY[mObjectHitId] = -Math.cos(mBallAngle[mObjectHitId])*mStringLength + mCenterOfRotationY;
-
-		        	//handle collision detection on neighbouring balls
-	    			if(mObjectHitId<mNumberOfBalls-1 && mBallAngle[mObjectHitId]<mBallAngle[mObjectHitId+1]) 
-	    			{
-	    				mBallAngle[mObjectHitId+1]=mBallAngle[mObjectHitId];
-	    				mBallVelocity[mObjectHitId+1]=0;
-	    			}
-	    			if(mObjectHitId>0 && mBallAngle[mObjectHitId]>mBallAngle[mObjectHitId-1])
-	    			{
-	    				mBallAngle[mObjectHitId-1]=mBallAngle[mObjectHitId];
-	    				mBallVelocity[mObjectHitId-1]=0;
-	    			}
-		        	
 	    			return true;
 				}
 			}else if(event.getAction()==MotionEvent.ACTION_UP)
 			{
-				if(mObjectHit)
+				if(mObjectTouched)
 				{
-					//translate the roational origin
-					double transX = mBallCenterX[mObjectHitId]-mCenterOfRotationX[mObjectHitId];
-					double transY = mBallCenterY[mObjectHitId]-mCenterOfRotationY;
-					//figure out the angle
-	    			if(transY>0) mBallAngle[mObjectHitId] = -Math.atan(transX/transY)+Math.PI;
-	    			else mBallAngle[mObjectHitId] = -Math.atan(transX/transY);
-
-		        	mBallCenterX[mObjectHitId] = Math.sin(mBallAngle[mObjectHitId])*mStringLength + mCenterOfRotationX[mObjectHitId]; 
-		        	mBallCenterY[mObjectHitId] = -Math.cos(mBallAngle[mObjectHitId])*mStringLength + mCenterOfRotationY;
-	    			mBallVelocity[mObjectHitId]=0;
-		        	
-	    			//handle collision detection on neighbouring balls
-	    			if(mObjectHitId<mNumberOfBalls-1 && mBallAngle[mObjectHitId]<mBallAngle[mObjectHitId+1])
-	    			{
-	    				mBallAngle[mObjectHitId+1]=mBallAngle[mObjectHitId];
-	    				mBallVelocity[mObjectHitId+1]=0;
-	    			}
-	    			
-	    			//handle collision detection on neighbouring balls
-	    			if(mObjectHitId>0 && mBallAngle[mObjectHitId]>mBallAngle[mObjectHitId-1])
-	    			{
-	    				mBallAngle[mObjectHitId-1]=mBallAngle[mObjectHitId];
-	    				mBallVelocity[mObjectHitId-1]=0;
-	    			}
-
-					mObjectHit=false;
+					mObjectTouched=false;
 					return true;
 				}
 			}
@@ -328,8 +333,6 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 
     /** Handle to the application context, used to e.g. fetch Drawables. */
     private Context mContext;
-
-    /** The thread that actually draws the animation */
     private BallsThread thread;
 
     public BallsView(Context context, AttributeSet attrs) {
@@ -341,9 +344,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 
         // create thread only; it's started in surfaceCreated()
         thread = new BallsThread(holder, context);
-        
         setOnTouchListener(thread);
-        setFocusable(true); // make sure we get key events
     }
 
     /**
@@ -361,16 +362,9 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
      */
     @Override
     public void onWindowFocusChanged(boolean hasWindowFocus) {
-       // if (!hasWindowFocus) thread.pause();
-        //else thread.resume();
+        //if (!hasWindowFocus) thread.doPause();
+       // else thread.resume();
     }
-
-    /**
-     * Installs a pointer to the text view used for messages.
-     */
-    //public void setTextView(TextView textView) {
-    //    mStatusText = textView;
-    //}
 
     /* Callback invoked when the surface dimensions change. */
     public void surfaceChanged(SurfaceHolder holder, int format, int width,

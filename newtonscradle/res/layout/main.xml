@@ -15,13 +15,12 @@
  * limitations under the License.
  -->
 
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    android:orientation="horizontal">
+    android:layout_height="fill_parent">
 
     <com.geekyouup.android.newton.BallsView
       android:id="@+id/myBalls"
       android:layout_width="fill_parent"
       android:layout_height="fill_parent"/>         
-</FrameLayout>
+</LinearLayout>
