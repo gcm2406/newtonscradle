@@ -32,6 +32,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         /** What to draw for the Lander when it has crashed */
         private Drawable mBall;
         private Bitmap mBackgroundImage;
+       // private Bitmap mForegroundImage;
         private boolean mRun = false;
         private SurfaceHolder mSurfaceHolder;
         private boolean mRunning = false;
@@ -41,7 +42,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         final int mFixedBallWidth = 56;
         //rot centers should be calculated based on number of balls, currently hardcoded = bad
         private final int[] mCenterOfRotationX=new int[]{240-mFixedBallWidth*2,240-mFixedBallWidth,240,240+mFixedBallWidth,240+mFixedBallWidth*2};
-        private final int mCenterOfRotationY=35;//
+        private final int mCenterOfRotationY=39;//
         private int[] mBallCenterX=new int[mNumberOfBalls];//{100};
         private int[] mBallCenterY=new int[mNumberOfBalls];//{220};
         private double[] angularVelocity=new double[mNumberOfBalls]; // POSITIVE = CLOCKWISE, NEG=ANTICLOCK
@@ -71,6 +72,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
             Resources res = mContext.getResources();
             mBall = mContext.getResources().getDrawable(R.drawable.ball);
             mBackgroundImage = BitmapFactory.decodeResource(res,R.drawable.background);
+           // mForegroundImage = BitmapFactory.decodeResource(res,R.drawable.foreground);
             mBallWidth = mBall.getIntrinsicWidth();
             mBallHeight = mBall.getIntrinsicHeight();
             mBallHalfWidth = mBallWidth/2;
@@ -93,6 +95,15 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
             }
         }
 
+        boolean normalBalls = true;
+        public void switchBalls()
+        {
+        	if(normalBalls) mBall = mContext.getResources().getDrawable(R.drawable.ballmippin);
+        	else mBall = mContext.getResources().getDrawable(R.drawable.ball);
+        		
+        	normalBalls = !normalBalls;
+        }
+        
         /**
          * Starts the game, setting parameters for the current difficulty.
          */
@@ -167,6 +178,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 	            mBall.setBounds(xLeft, yTop, xLeft + mBallWidth, yTop + mBallHeight);
 	            mBall.draw(canvas);
     		}
+    		//canvas.drawBitmap(mForegroundImage, 0, 0, null);
         }
         
         public void setSoundState(boolean soundState)
@@ -203,8 +215,8 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         
         public void hitTestBall(int testBall) //only need to test 2 surrounding balls really
         {
-        	//int startPoint = testBall>1?testBall-1:0;
-        	//for(int j=startPoint;j<testBall+1;j++)
+        	int startPoint = testBall>1?testBall-1:0;
+        	//for(int j=0;j<mNumberOfBalls;j++)
         	for(int j=0;j<mNumberOfBalls;j++)
         	{
         		if(testBall==j) continue; //skip hit test with self

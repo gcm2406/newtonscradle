@@ -7,12 +7,10 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
-import android.content.pm.ActivityInfo;
 import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.Window;
 import android.widget.Toast;
 
 public class NewtonsBalls extends Activity {
@@ -24,7 +22,8 @@ public class NewtonsBalls extends Activity {
 	
     private static final int MENU_TOGGLESOUND = 0;
     private static final int MENU_ABOUT = 1;
-    private static final int MENU_EXIT = 2;
+    private static final int MENU_BALLS = 2;
+    private static final int MENU_EXIT = 3;
     private static final int DIALOG_WELCOME=0;
     private boolean isSoundOn = true;
     private static final String PREFS_NAME ="GYUNEWTON";
@@ -34,7 +33,6 @@ public class NewtonsBalls extends Activity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         // tell system to use the layout defined in our XML file
-        //setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         setContentView(R.layout.main);
         
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
@@ -55,8 +53,9 @@ public class NewtonsBalls extends Activity {
     public boolean onCreateOptionsMenu(Menu menu) {
         super.onCreateOptionsMenu(menu);
         menu.add(0, MENU_TOGGLESOUND, 0, "Toggle Sound").setIcon(android.R.drawable.ic_menu_info_details);
-        menu.add(0, MENU_ABOUT, 1, "About").setIcon(android.R.drawable.ic_menu_info_details);
-        menu.add(0, MENU_EXIT, 2, "Exit").setIcon(android.R.drawable.ic_menu_info_details);
+        menu.add(0, MENU_BALLS, 1, "Change balls").setIcon(android.R.drawable.ic_input_get);
+        menu.add(0, MENU_ABOUT, 2, "About").setIcon(android.R.drawable.ic_menu_info_details);
+        menu.add(0, MENU_EXIT, 3, "Exit").setIcon(android.R.drawable.ic_menu_info_details);
         return true;
     }
     
@@ -81,6 +80,10 @@ public class NewtonsBalls extends Activity {
     	}else if(item.getItemId() == MENU_ABOUT)
    	 	{
     		showDialog(DIALOG_WELCOME);
+    		return true;
+   	 	}else if(item.getItemId() == MENU_BALLS)
+   	 	{
+   	 		mBallsThread.switchBalls();
     		return true;
    	 	}else if(item.getItemId() == MENU_EXIT)
    	 	{
