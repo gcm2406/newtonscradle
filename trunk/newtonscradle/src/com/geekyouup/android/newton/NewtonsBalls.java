@@ -4,6 +4,7 @@ import com.geekyouup.android.newton.BallsView.BallsThread;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
@@ -32,12 +33,9 @@ public class NewtonsBalls extends Activity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // turn off the window's title bar
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
-
         // tell system to use the layout defined in our XML file
+        //setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         setContentView(R.layout.main);
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         // get handles to the LunarView from XML, and its LunarThread
@@ -45,14 +43,12 @@ public class NewtonsBalls extends Activity {
         mBallsThread = mBallsView.getThread();
         
         //Make sure the welcome message only appears on first launch
-        SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+        SharedPreferences settings = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         if(settings !=null)
         {
      	   isSoundOn = settings.getBoolean(PREFS_SOUND, true);
      	   mBallsThread.setSoundState(isSoundOn);
         }
-        
-        mBallsThread.doStart();
     }
     
     @Override
@@ -120,7 +116,7 @@ public class NewtonsBalls extends Activity {
     protected void onPause() {
         super.onPause();
         mSensorManager.unregisterListener(mBallsThread);
-        //finish(); //cause app not to run in background
+        mBallsThread.doPause();
     }
     
     @Override
@@ -129,17 +125,7 @@ public class NewtonsBalls extends Activity {
         mSensorManager.registerListener(mBallsThread,
                 SensorManager.SENSOR_ACCELEROMETER,
                 SensorManager.SENSOR_DELAY_UI);
-    }
-    
-    /**
-     * Notification that something is about to happen, to give the Activity a
-     * chance to save state.
-     * 
-     * @param outState a Bundle into which this Activity should save its state
-     */
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        // just have the View's thread save its state into our Bundle
-        super.onSaveInstanceState(outState);
+        
+        mBallsThread.doStart();
     }
 }
