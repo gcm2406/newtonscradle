@@ -177,7 +177,6 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 	            mBall.setBounds(xLeft, yTop, xLeft + mBallWidth, yTop + mBallHeight);
 	            mBall.draw(canvas);
     		}
-    		//canvas.drawBitmap(mForegroundImage, 0, 0, null);
         }
         
         public void setSoundState(boolean soundState)
@@ -210,14 +209,59 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 		        	
         			hitTestBall(i);
         		}
+        		
+        		//performHitTests();
         }
+        
+      /*  public void performHitTests()
+        {
+        	for(int ballA=0;ballA<mNumberOfBalls;ballA++)
+        	{
+        		//check if this ball has collided with balls either side
+        		if(ballA>1)
+        		{
+        			int ballB = ballA-1;
+            		//if distance between the 2 centers of the balls is <= to ball width then switch their momentums
+            		double mDistBetweenBalls = Math.sqrt((Math.pow(mBallCenterX[ballB]-mBallCenterX[ballA],2)
+            										+Math.pow(mBallCenterY[ballB]-mBallCenterY[ballA], 2)));
+            		
+            		//tranfer momentum between collided and moving balls
+            		if(mDistBetweenBalls<mBallWidth)
+            		{
+	        			float velA = mBallVelocity[ballA];
+	        			mBallVelocity[ballA] = mBallVelocity[ballB];
+	        			mBallVelocity[ballB] = velA;
+        				mBallAngle[ballA] = mBallAngle[ballB];
+            		}
+
+        		}
+        		
+        		if(ballA<mNumberOfBalls-1)
+        		{
+        			int ballB = ballA+1;
+            		//if distance between the 2 centers of the balls is <= to ball width then switch their momentums
+            		double mDistBetweenBalls = Math.sqrt((Math.pow(mBallCenterX[ballA]-mBallCenterX[ballB],2)
+            										+Math.pow(mBallCenterY[ballA]-mBallCenterY[ballB], 2)));
+
+            		//tranfer momentum between collided and moving balls
+            		if(mDistBetweenBalls<mBallWidth)
+            		{
+	        			float velA = mBallVelocity[ballA];
+	        			mBallVelocity[ballA] = mBallVelocity[ballB];
+	        			mBallVelocity[ballB] = velA;
+        				mBallAngle[ballA] = mBallAngle[ballB];
+            		}
+        		}
+        		
+        	}
+        }*/
         
         public void hitTestBall(int testBall) //only need to test 2 surrounding balls really
         {
-        	int startPoint = testBall>1?testBall-1:0;
-        	int endPoint = testBall<mNumberOfBalls-1?testBall+2:mNumberOfBalls;
-        	//for(int j=0;j<mNumberOfBalls;j++)
-        	for(int j=startPoint;j<endPoint;j++)
+        	//hit testing the balls in left to right order
+        	// can use this to optimize as unlikely collisions are not checked 
+        	//int endPoint = testBall<mNumberOfBalls-1?testBall+2:mNumberOfBalls;
+        	for(int j=0;j<mNumberOfBalls;j++)
         	{
         		if(testBall==j) continue; //skip hit test with self
         		
@@ -230,7 +274,6 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         		{
         			if(isSoundOn && mBallSounds[j]!=null && !mBallSounds[j].isPlaying())
         			{
-        				//mSound.seekTo(0);
         				float vol = (float) (Math.abs(mBallVelocity[j])+Math.abs(mBallVelocity[testBall]));
         				if(vol >1) vol=1;
         				mBallSounds[j].setVolume(vol, vol);
@@ -248,9 +291,12 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
     		        	mBallCenterY[j] = calcYCoordOfBall(j);
         			}else if(mObjectTouched && (mObjectTouchedId==j || (mObjectTouchedId>testBall && j>testBall) ))
         			{
+	        			float velJ = mBallVelocity[j];
+	        			mBallVelocity[j] = mBallVelocity[testBall];
+	        			mBallVelocity[testBall] = velJ;
         				mBallAngle[testBall] = mBallAngle[j];
-        				mBallVelocity[testBall]=0;
-        				mBallVelocity[j]=0;
+        				//mBallVelocity[testBall]=0;
+        				//mBallVelocity[j]=0;
         				
     		        	mBallCenterX[testBall] = calcXCoordOfBall(testBall); 
     		        	mBallCenterY[testBall] = calcYCoordOfBall(testBall);
@@ -340,7 +386,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 					return true;
 				}
 			}
-			return false;
+			return true;
 		}
     }
 
