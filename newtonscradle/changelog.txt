@@ -1,0 +1,5 @@
+v1.0.1
+Physics model switched from double to float and Math package to FloatMath package for performance gains.
+
+v1.0.0
+Initial version
