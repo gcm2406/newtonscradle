@@ -1,5 +1,6 @@
 v1.0.1
 Physics model switched from double to float and Math package to FloatMath package for performance gains.
+Bugfix: When touch holding a ball the other balls continue to react correctly
 
 v1.0.0
 Initial version
