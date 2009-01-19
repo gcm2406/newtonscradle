@@ -1,5 +1,7 @@
 package com.geekyouup.android.newton;
 
+import java.util.HashMap;
+
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
@@ -10,7 +12,9 @@ import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
 import android.hardware.SensorListener;
 import android.hardware.SensorManager;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.media.SoundPool;
 import android.util.AttributeSet;
 import android.util.FloatMath;
 import android.view.MotionEvent;
@@ -64,7 +68,9 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         private int mBallHeight;
         private int mBallHalfWidth;
         private Paint mLinePaint;
-        private MediaPlayer[] mBallSounds = new MediaPlayer[mNumberOfBalls];
+        private SoundPool soundPool; 
+        public static final int SOUND_BALL_CLINK = 1;
+        private HashMap<Integer, Integer> soundPoolMap; 
         
         public BallsThread(SurfaceHolder surfaceHolder, Context app) {
             // get handles to some important objects
@@ -86,6 +92,10 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
             mLinePaint.setStrokeWidth(2);
             
             initBalls();
+            
+            soundPool = new SoundPool(10, AudioManager.STREAM_MUSIC, 80);
+            soundPoolMap = new HashMap<Integer, Integer>();
+            soundPoolMap.put(SOUND_BALL_CLINK, soundPool.load(getContext(), R.raw.clink, 1));
         }
 
         private void initBalls()
@@ -97,8 +107,6 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
             	mBallCenterY[i] = mCenterOfRotationY+mStringLength;
             	mBallVelocity[i]=0;
             	mBallAngle[i]=-3.2f; //start angle of balls
-            	
-            	if(mBallSounds[i]==null) mBallSounds[i] = MediaPlayer.create(mContext, R.raw.clink);
             }
         }
         
@@ -217,8 +225,6 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 		        	
         			hitTestBall(i);
         		}
-        		
-        		//performHitTests();
         }
         
         public void hitTestBall(int testBall) //only need to test 2 surrounding balls really
@@ -237,12 +243,11 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         		//tranfer momentum between collided and moving balls
         		if(mDistBetweenBalls<mBallWidth)
         		{
-        			if(isSoundOn && mBallSounds[j]!=null && !mBallSounds[j].isPlaying())
-        			{
-        				float vol = (float) (Math.abs(mBallVelocity[j])+Math.abs(mBallVelocity[testBall]));
+        			if(isSoundOn)
+        			{        				
+        				float vol = (float) (Math.abs(mBallVelocity[j])+Math.abs(mBallVelocity[testBall]))/8;
         				if(vol >1) vol=1;
-        				mBallSounds[j].setVolume(vol, vol);
-        				mBallSounds[j].start();
+        				playSound(SOUND_BALL_CLINK,vol);
         			}
         			
         			//for 2 balls to collide they must be at the same angle, fix overlaps by doing this.
@@ -276,6 +281,13 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         		}
         	}
         }
+        
+        public void playSound(int sound, float vol) {
+            AudioManager mgr = (AudioManager)getContext().getSystemService(Context.AUDIO_SERVICE);
+            float streamVolume = mgr.getStreamVolume(AudioManager.STREAM_MUSIC)*vol;
+            //soundPool.setVolume(arg0, arg1, arg2);
+            soundPool.play(soundPoolMap.get(sound), streamVolume, streamVolume, 1, 0, 1f);
+        } 
         
         //calculates balls x coordinate based on its angle and string hanging point
         private int calcXCoordOfBall(int ballId)
