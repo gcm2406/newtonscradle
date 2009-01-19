@@ -78,7 +78,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
             mContext = app;
 
             Resources res = mContext.getResources();
-            mBall = mContext.getResources().getDrawable(R.drawable.ball);
+            mBall = mContext.getResources().getDrawable(R.drawable.ball0);
             mBackgroundImage = BitmapFactory.decodeResource(res,R.drawable.background);
             mBallWidth = mBall.getIntrinsicWidth();
             mBallHeight = mBall.getIntrinsicHeight();
@@ -109,13 +109,23 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
             }
         }
         
-        boolean normalBalls = true;
+        int ballsState=0;
+        int numStates=3;
         public void switchBalls()
         {
-        	if(normalBalls) mBall = mContext.getResources().getDrawable(R.drawable.ballmippin);
-        	else mBall = mContext.getResources().getDrawable(R.drawable.ball);
-        		
-        	normalBalls = !normalBalls;
+        	ballsState = (++ballsState)%numStates;
+        	switch(ballsState)
+        	{
+        		case 0:
+        			mBall = mContext.getResources().getDrawable(R.drawable.ball0);
+        			break;
+        		case 1:
+        			mBall = mContext.getResources().getDrawable(R.drawable.ball1);
+        			break;
+        		case 2:
+        			mBall = mContext.getResources().getDrawable(R.drawable.ball2);
+        			break;
+        	}
         }
         
         /**
@@ -226,7 +236,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         			hitTestBall(i);
         		}
         		
-        		if(hitOccured!=-1) 
+        		if(hitOccured!=-1)  //hitoccured is set during hittest
         		{
         			playSound(SOUND_BALL_CLINK, hitOccured);
         			hitOccured=-1;
@@ -254,7 +264,6 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         			{        				
         				hitOccured = (float) (Math.abs(mBallVelocity[j])+Math.abs(mBallVelocity[testBall]))/8;
         				if(hitOccured >1) hitOccured=1;
-        				//playSound(SOUND_BALL_CLINK,vol);
         			}
         			
         			//for 2 balls to collide they must be at the same angle, fix overlaps by doing this.

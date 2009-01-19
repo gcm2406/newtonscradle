@@ -4,6 +4,7 @@ Physics model switched from double to float and Math package to FloatMath packag
 Drag coefficient altered to give more realistic swinging times
 Bugfix: When touch holding a ball the other balls continue to react correctly
 Sound/Accelerometer Menu Items now have toggle graphics
+Sound sample improved and Sound model switched from MediaPlayer to SoundPool
 
 v1.0.0
 Initial version
