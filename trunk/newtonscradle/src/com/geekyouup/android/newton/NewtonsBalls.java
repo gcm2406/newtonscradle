@@ -21,20 +21,25 @@ public class NewtonsBalls extends Activity {
 	private SensorManager mSensorManager;
 	
     private static final int MENU_TOGGLESOUND = 0;
+    private static final int MENU_TOGGLEACCEL = 4;
+    private static final int MENU_FLIP_ORIENTATION = 5;
     private static final int MENU_ABOUT = 1;
     private static final int MENU_BALLS = 2;
     private static final int MENU_EXIT = 3;
     private static final int DIALOG_WELCOME=0;
     private boolean isSoundOn = false;
+    private boolean isAccelOn = true;
     private static final String PREFS_NAME ="GYUNEWTON";
     private static final String PREFS_SOUND ="SOUNDON";
+    private static final String PREFS_ACCEL ="ACCELON";
+    private MenuItem mSoundMenuItem;
+    private MenuItem mAccelMenuItem;
     
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         // tell system to use the layout defined in our XML file
         setContentView(R.layout.main);
-        
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         // get handles to the LunarView from XML, and its LunarThread
         mBallsView = (BallsView) findViewById(R.id.myBalls);
@@ -46,16 +51,26 @@ public class NewtonsBalls extends Activity {
         {
      	   isSoundOn = settings.getBoolean(PREFS_SOUND, false);
      	   mBallsThread.setSoundState(isSoundOn);
+     	   
+     	   isAccelOn = settings.getBoolean(PREFS_ACCEL, true);
+     	   if(!isAccelOn) mBallsThread.setAccelerometer(false);
         }
     }
     
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         super.onCreateOptionsMenu(menu);
-        menu.add(0, MENU_TOGGLESOUND, 0, "Toggle Sound").setIcon(android.R.drawable.ic_menu_info_details);
-        menu.add(0, MENU_BALLS, 1, "Change balls").setIcon(android.R.drawable.ic_input_get);
-        menu.add(0, MENU_ABOUT, 2, "About").setIcon(android.R.drawable.ic_menu_info_details);
-        menu.add(0, MENU_EXIT, 3, "Exit").setIcon(android.R.drawable.ic_menu_info_details);
+        mSoundMenuItem= menu.add(0, MENU_TOGGLESOUND, 0, "Sound").setIcon(isSoundOn?android.R.drawable.button_onoff_indicator_on:android.R.drawable.button_onoff_indicator_off);
+        mAccelMenuItem = menu.add(0, MENU_TOGGLEACCEL, 1, "Accelerometer").setIcon(isAccelOn?android.R.drawable.button_onoff_indicator_on:android.R.drawable.button_onoff_indicator_off);
+        menu.add(0, MENU_FLIP_ORIENTATION, 2, "Flip").setIcon(android.R.drawable.ic_menu_rotate);
+        menu.add(0, MENU_BALLS, 3, "Balls").setIcon(android.R.drawable.ic_input_get);
+        menu.add(0, MENU_ABOUT, 4, "About").setIcon(android.R.drawable.ic_menu_info_details);
+        menu.add(0, MENU_EXIT, 5, "Exit").setIcon(android.R.drawable.ic_lock_power_off );
+    	
+        
+        //MenuInflater inflater = getMenuInflater();
+        //inflater.inflate(R.menu.checkable, menu);
+
         return true;
     }
     
@@ -64,6 +79,7 @@ public class NewtonsBalls extends Activity {
     	if(item.getItemId() == MENU_TOGGLESOUND)
     	{
     		isSoundOn = !isSoundOn;
+    		if(mSoundMenuItem!=null) mSoundMenuItem.setIcon(isSoundOn?android.R.drawable.button_onoff_indicator_on:android.R.drawable.button_onoff_indicator_off);
     		mBallsThread.setSoundState(isSoundOn);
     		
     		Toast.makeText(this, "Sound " + (isSoundOn?"on":"off"), Toast.LENGTH_SHORT).show();
@@ -76,6 +92,35 @@ public class NewtonsBalls extends Activity {
 	           editor.putBoolean(PREFS_SOUND, isSoundOn);
 	           editor.commit();
             }
+    		return true;
+    	}else if(item.getItemId() == MENU_TOGGLEACCEL)
+    	{
+    		if(isAccelOn)
+    		{
+    			mSensorManager.unregisterListener(mBallsThread);
+    			mBallsThread.setAccelerometer(false);
+    			isAccelOn=false;
+    		}else
+    		{
+        		mSensorManager.registerListener(mBallsThread,
+                        SensorManager.SENSOR_ACCELEROMETER,
+                        SensorManager.SENSOR_DELAY_UI);
+        		mBallsThread.setAccelerometer(true);
+        		isAccelOn=true;
+    		}
+    		
+    		mAccelMenuItem.setIcon(isAccelOn?android.R.drawable.button_onoff_indicator_on:android.R.drawable.button_onoff_indicator_off);
+    		Toast.makeText(this, "Accelerometer " + (isAccelOn?"on":"off"), Toast.LENGTH_SHORT).show();
+            SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+            if(settings !=null)
+            {
+	           SharedPreferences.Editor editor = settings.edit();
+	           editor.putBoolean(PREFS_ACCEL, isAccelOn);
+	           editor.commit();
+            }
+    	}else if(item.getItemId() == MENU_FLIP_ORIENTATION)
+    	{
+    		mBallsThread.flipOrientation();
     		return true;
     	}else if(item.getItemId() == MENU_ABOUT)
    	 	{
@@ -125,9 +170,12 @@ public class NewtonsBalls extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        mSensorManager.registerListener(mBallsThread,
-                SensorManager.SENSOR_ACCELEROMETER,
-                SensorManager.SENSOR_DELAY_UI);
+        if(isAccelOn)
+        {
+	        mSensorManager.registerListener(mBallsThread,
+	                SensorManager.SENSOR_ACCELEROMETER,
+	                SensorManager.SENSOR_DELAY_UI);
+        }
         
         mBallsThread.doStart();
     }
