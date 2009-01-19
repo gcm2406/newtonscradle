@@ -5,6 +5,7 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
 import android.hardware.SensorListener;
@@ -43,7 +44,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         final int mFixedBallWidth = 56;
         //rot centers should be calculated based on number of balls, currently hardcoded = bad
         private final int[] mCenterOfRotationX=new int[]{240-mFixedBallWidth*2,240-mFixedBallWidth,240,240+mFixedBallWidth,240+mFixedBallWidth*2};
-        private final int mCenterOfRotationY=39;//
+        private int mCenterOfRotationY=39;//
         private int[] mBallCenterX=new int[mNumberOfBalls];//{100};
         private int[] mBallCenterY=new int[mNumberOfBalls];//{220};
     	private float angleOfGravityVelocity = -3.2f;
@@ -51,12 +52,13 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
        	private boolean mObjectTouched = false;
     	private int mObjectTouchedId =-1;
     	private boolean isSoundOn = false;
+    	private boolean isOrientNormal=true; //rotate around so we can stand device on surface
 
         private float[] mBallVelocity=new float[mNumberOfBalls];//, approximate velocity at step i 
         private float[] mBallAngle=new float[mNumberOfBalls];//0.4;//, approximate angular displacement at step i 
      	final float g=SensorManager.STANDARD_GRAVITY;  // set gravitational acceleration parameter
      	final float L=1;//, length of pendulum (input variable) 
-		public static final int mStringLength=180; //pixels
+		public int mStringLength=180; //default 180 pixels
         
         private int mBallWidth;
         private int mBallHeight;
@@ -83,6 +85,11 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
             mLinePaint.setARGB(255,167, 167, 167);
             mLinePaint.setStrokeWidth(2);
             
+            initBalls();
+        }
+
+        private void initBalls()
+        {
             //setup all the balls
             for(int i=0;i<mNumberOfBalls;i++)
             {
@@ -90,10 +97,11 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
             	mBallCenterY[i] = mCenterOfRotationY+mStringLength;
             	mBallVelocity[i]=0;
             	mBallAngle[i]=-3.2f; //start angle of balls
-            	mBallSounds[i] = MediaPlayer.create(app, R.raw.clink);
+            	
+            	if(mBallSounds[i]==null) mBallSounds[i] = MediaPlayer.create(mContext, R.raw.clink);
             }
         }
-
+        
         boolean normalBalls = true;
         public void switchBalls()
         {
@@ -130,6 +138,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 		                    c = mSurfaceHolder.lockCanvas(null);
 		                    synchronized (mSurfaceHolder) {
 			                    	updatePhysics();
+			                    	//if(!isOrientNormal) c.rotate(180,240,160);
 			                        doDraw(c);
 		                    }
 	                } finally {
@@ -165,11 +174,10 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         private void doDraw(Canvas canvas) {
             // Draw the background image. Operations on the Canvas accumulate
             // so this is like clearing the screen.
-           
         	canvas.drawBitmap(mBackgroundImage, 0, 0, null);
     		for(int i=0;i<mNumberOfBalls;i++)
     		{
-	            int yTop = (int) (mBallCenterY[i] - mBallHalfWidth);
+	            int yTop = (int) (mBallCenterY[i] -mBallHalfWidth);
 	            int xLeft = (int) (mBallCenterX[i] - mBallHalfWidth);
 	
 	            canvas.drawLine(mCenterOfRotationX[i], mCenterOfRotationY,  xLeft + mBallHalfWidth, yTop+mBallHalfWidth, mLinePaint);
@@ -199,7 +207,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 			            mBallVelocity[i] = mBallVelocity[i] - BALL_WEIGHT*g*FloatMath.sin(mBallAngle[i]-angleOfGravityVelocity)*elapsed;
 						
 			            //0.995 for constant drag, should be related to 0.5*sq(v)
-			            mBallVelocity[i]=mBallVelocity[i]*0.997f; //this should be related to square of velocity
+			            mBallVelocity[i]=mBallVelocity[i]*0.998f; //this should be related to square of velocity
 						
 			            mBallAngle[i] = mBallAngle[i] + mBallVelocity[i]*elapsed/L;
 	    			}
@@ -212,49 +220,6 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         		
         		//performHitTests();
         }
-        
-      /*  public void performHitTests()
-        {
-        	for(int ballA=0;ballA<mNumberOfBalls;ballA++)
-        	{
-        		//check if this ball has collided with balls either side
-        		if(ballA>1)
-        		{
-        			int ballB = ballA-1;
-            		//if distance between the 2 centers of the balls is <= to ball width then switch their momentums
-            		double mDistBetweenBalls = Math.sqrt((Math.pow(mBallCenterX[ballB]-mBallCenterX[ballA],2)
-            										+Math.pow(mBallCenterY[ballB]-mBallCenterY[ballA], 2)));
-            		
-            		//tranfer momentum between collided and moving balls
-            		if(mDistBetweenBalls<mBallWidth)
-            		{
-	        			float velA = mBallVelocity[ballA];
-	        			mBallVelocity[ballA] = mBallVelocity[ballB];
-	        			mBallVelocity[ballB] = velA;
-        				mBallAngle[ballA] = mBallAngle[ballB];
-            		}
-
-        		}
-        		
-        		if(ballA<mNumberOfBalls-1)
-        		{
-        			int ballB = ballA+1;
-            		//if distance between the 2 centers of the balls is <= to ball width then switch their momentums
-            		double mDistBetweenBalls = Math.sqrt((Math.pow(mBallCenterX[ballA]-mBallCenterX[ballB],2)
-            										+Math.pow(mBallCenterY[ballA]-mBallCenterY[ballB], 2)));
-
-            		//tranfer momentum between collided and moving balls
-            		if(mDistBetweenBalls<mBallWidth)
-            		{
-	        			float velA = mBallVelocity[ballA];
-	        			mBallVelocity[ballA] = mBallVelocity[ballB];
-	        			mBallVelocity[ballB] = velA;
-        				mBallAngle[ballA] = mBallAngle[ballB];
-            		}
-        		}
-        		
-        	}
-        }*/
         
         public void hitTestBall(int testBall) //only need to test 2 surrounding balls really
         {
@@ -295,8 +260,6 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 	        			mBallVelocity[j] = mBallVelocity[testBall];
 	        			mBallVelocity[testBall] = velJ;
         				mBallAngle[testBall] = mBallAngle[j];
-        				//mBallVelocity[testBall]=0;
-        				//mBallVelocity[j]=0;
         				
     		        	mBallCenterX[testBall] = calcXCoordOfBall(testBall); 
     		        	mBallCenterY[testBall] = calcYCoordOfBall(testBall);
@@ -315,15 +278,37 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         }
         
         //calculates balls x coordinate based on its angle and string hanging point
-        public int calcXCoordOfBall(int ballId)
+        private int calcXCoordOfBall(int ballId)
         {
         	return (int) (FloatMath.sin(mBallAngle[ballId])*mStringLength + mCenterOfRotationX[ballId]);
         }
         
         //calculates balls y coordinate based on its angle and string hanging point
-        public int calcYCoordOfBall(int ballId)
+        private int calcYCoordOfBall(int ballId)
         {
         	return (int) (-FloatMath.cos(mBallAngle[ballId])*mStringLength + mCenterOfRotationY);
+        }
+        
+        public void flipOrientation()
+        {
+        	isOrientNormal=!isOrientNormal;
+            Matrix matrix = new Matrix();
+            matrix.postRotate(180);
+            mBackgroundImage = Bitmap.createBitmap(mBackgroundImage, 0, 0,480, 320, matrix, false); 
+            if(isOrientNormal)
+            {
+            	mCenterOfRotationY = 39;
+            	mStringLength=180;
+            }else
+            {
+            	mCenterOfRotationY = 320-39;
+            	mStringLength=-180;
+            }
+
+        }
+        public void setAccelerometer(boolean on)
+        {
+        	if(!on) angleOfGravityVelocity=-3.2f;
         }
         
     	public void onAccuracyChanged(int arg0, int arg1) {}
@@ -333,8 +318,8 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
     		if(sensor == SensorManager.SENSOR_ACCELEROMETER)
     		{
     			//had to switch these round after going landscape
-    			float gravityOffsetX = -values[3]; //use non orientation effected values
-    			float gravityOffsetY = values[4];
+    			float gravityOffsetX = (isOrientNormal?-values[3]:values[3]); //use non orientation effected values
+    			float gravityOffsetY = (isOrientNormal?values[4]:-values[4]);
 
     			//sort out the changed angle of gravity, the Y Offset switch is due to the graph of tan(theta) jumping
     			if(gravityOffsetY>0) angleOfGravityVelocity = (float) (-Math.atan(gravityOffsetX/gravityOffsetY)-Math.PI/2);
@@ -371,6 +356,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 					//translate the roational origin
 					float transX = event.getX()-mCenterOfRotationX[mObjectTouchedId];
 					float transY = event.getY()-mCenterOfRotationY;
+					if(!isOrientNormal) {transX=-transX; transY=-transY;}
 					
 					//figure out the angle the ball is now at
 	    			if(transY>0) mBallAngle[mObjectTouchedId] = (float) (-Math.atan(transX/transY)+Math.PI);
