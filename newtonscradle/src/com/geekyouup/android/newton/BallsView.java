@@ -80,7 +80,6 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
             Resources res = mContext.getResources();
             mBall = mContext.getResources().getDrawable(R.drawable.ball);
             mBackgroundImage = BitmapFactory.decodeResource(res,R.drawable.background);
-           // mForegroundImage = BitmapFactory.decodeResource(res,R.drawable.foreground);
             mBallWidth = mBall.getIntrinsicWidth();
             mBallHeight = mBall.getIntrinsicHeight();
             mBallHalfWidth = mBallWidth/2;
@@ -93,7 +92,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
             
             initBalls();
             
-            soundPool = new SoundPool(10, AudioManager.STREAM_MUSIC, 80);
+            soundPool = new SoundPool(10, AudioManager.STREAM_MUSIC, 100);
             soundPoolMap = new HashMap<Integer, Integer>();
             soundPoolMap.put(SOUND_BALL_CLINK, soundPool.load(getContext(), R.raw.clink, 1));
         }
@@ -200,6 +199,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         	this.isSoundOn = soundState;
         }
         
+        private float hitOccured=-1; 
         private void updatePhysics() {
 
         		//do the collision detection
@@ -225,6 +225,12 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 		        	
         			hitTestBall(i);
         		}
+        		
+        		if(hitOccured!=-1) 
+        		{
+        			playSound(SOUND_BALL_CLINK, hitOccured);
+        			hitOccured=-1;
+        		}
         }
         
         public void hitTestBall(int testBall) //only need to test 2 surrounding balls really
@@ -243,11 +249,12 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         		//tranfer momentum between collided and moving balls
         		if(mDistBetweenBalls<mBallWidth)
         		{
+
         			if(isSoundOn)
         			{        				
-        				float vol = (float) (Math.abs(mBallVelocity[j])+Math.abs(mBallVelocity[testBall]))/8;
-        				if(vol >1) vol=1;
-        				playSound(SOUND_BALL_CLINK,vol);
+        				hitOccured = (float) (Math.abs(mBallVelocity[j])+Math.abs(mBallVelocity[testBall]))/8;
+        				if(hitOccured >1) hitOccured=1;
+        				//playSound(SOUND_BALL_CLINK,vol);
         			}
         			
         			//for 2 balls to collide they must be at the same angle, fix overlaps by doing this.
@@ -285,7 +292,6 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         public void playSound(int sound, float vol) {
             AudioManager mgr = (AudioManager)getContext().getSystemService(Context.AUDIO_SERVICE);
             float streamVolume = mgr.getStreamVolume(AudioManager.STREAM_MUSIC)*vol;
-            //soundPool.setVolume(arg0, arg1, arg2);
             soundPool.play(soundPoolMap.get(sound), streamVolume, streamVolume, 1, 0, 1f);
         } 
         
