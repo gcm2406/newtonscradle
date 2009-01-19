@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     
-    <string name="app_name">NewtonsBalls</string>
+    <string name="app_name">Newtons Cradle</string>
 <string name="about">A physics model of a Newton\'s Cradle.\nBalls are touch draggable to create motion and also affected by accelerometer.\n\nTwitter: @geekyouup\nSource at: http://newtonscradle.googlecode.com</string>
-<string name="about_title">Newton\'s Cradle</string>
+<string name="about_title">Newton\'s Cradle v1.0.1</string>
 </resources>
