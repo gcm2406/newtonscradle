@@ -75,7 +75,8 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         public static final int SOUND_BALL_CLINK = 1;
         private HashMap<Integer, Integer> soundPoolMap; 
         private Calendar mCal = Calendar.getInstance();
-        private boolean clockOn = true;
+        private int clockState = 1; //0=off, 1=on, 2=onballs
+        
         
         public BallsThread(SurfaceHolder surfaceHolder, Context app) {
             // get handles to some important objects
@@ -205,7 +206,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
          */
         long lastClockUpdate = 0L;
         String calTime="";
-       // String[] ballTexts = new String[5];
+        String[] ballTexts = new String[5];
         boolean showColon = true;
         int clockXPos = 0;
         private void updateClock()
@@ -217,19 +218,20 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         		
 	        	calHour = mCal.get(Calendar.HOUR)+"";
 	        	if(calHour.equals("0") && mCal.get(Calendar.AM_PM)==Calendar.PM) calHour ="12";
-	        	//if(calHour.length()==1) calHour = " " +calHour;
+	        	
 	        	calMin = mCal.get(Calendar.MINUTE)+"";
 	        	if(calMin.length()==1) calMin = "0"+calMin;
 	        	
-	           // ballTexts[0]=calHour.substring(0,1);
-	           // ballTexts[1] = calHour.substring(1,2);
-	           // ballTexts[2]= " :";
-	           // ballTexts[3] = calMin.substring(0,1);
-	           // ballTexts[4] = calMin.substring(1,2);
-	        	
 	        	calTime = calHour+(showColon?":":" ")+calMin + (mCal.get(Calendar.AM_PM)==Calendar.AM?"am":"pm");
+
+	        	if(calHour.length()==1) calHour = " " +calHour;
+	            ballTexts[0]=calHour.substring(0,1);
+	            ballTexts[1] = calHour.substring(1,2);
+	            ballTexts[2]= " :";
+	            ballTexts[3] = calMin.substring(0,1);
+	            ballTexts[4] = calMin.substring(1,2);
+
 	        	lastClockUpdate = System.currentTimeMillis();
-	        	
 	        	showColon = !showColon;
 	        	
 	        	float[] charWidths = new float[]{0,0,0,0,0,0,0,0,0};
@@ -247,7 +249,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
             // Draw the background image. Operations on the Canvas accumulate
             // so this is like clearing the screen.
         	canvas.drawBitmap(mBackgroundImage, 0, 0, null);
-        	if(clockOn) updateClock();
+        	if(clockState>0) updateClock();
         	
     		for(int i=0;i<mNumberOfBalls;i++)
     		{
@@ -259,10 +261,10 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 	            mBall.setBounds(xLeft, yTop, xLeft + mBallWidth, yTop + mBallHeight);
 	            mBall.draw(canvas);
 	            
-	           // canvas.drawText(ballTexts[i], xLeft+17, yTop+43, mBallTextPaint);
+	           if(clockState==2) canvas.drawText(ballTexts[i], xLeft+17, yTop+43, mBallTextPaint);
     		}
     		
-    		if(clockOn) canvas.drawText(calTime, clockXPos, 305, mTextPaint);
+    		if(clockState==1) canvas.drawText(calTime, clockXPos, 305, mTextPaint);
         }
         
         public void setSoundState(boolean soundState)
@@ -424,7 +426,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 				
 				if(touchY>290) 
 				{
-					clockOn = !clockOn;
+					clockState = (clockState+1)%3;
 				}
 				else
 				{
