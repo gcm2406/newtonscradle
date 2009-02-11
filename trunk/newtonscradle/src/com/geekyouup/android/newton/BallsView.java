@@ -74,7 +74,6 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         private SoundPool soundPool; 
         public static final int SOUND_BALL_CLINK = 1;
         private HashMap<Integer, Integer> soundPoolMap; 
-        private Calendar mCal = Calendar.getInstance();
         private int clockState = 1; //0=off, 1=on, 2=onballs
         
         
@@ -215,7 +214,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         	{
             	String calHour = "";
             	String calMin = "";
-        		
+            	Calendar mCal = Calendar.getInstance();
 	        	calHour = mCal.get(Calendar.HOUR)+"";
 	        	if(calHour.equals("0") && mCal.get(Calendar.AM_PM)==Calendar.PM) calHour ="12";
 	        	
