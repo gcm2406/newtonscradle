@@ -1,5 +1,6 @@
 package com.geekyouup.android.newton;
 
+import java.util.Calendar;
 import java.util.HashMap;
 
 import android.content.Context;
@@ -68,9 +69,13 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         private int mBallHeight;
         private int mBallHalfWidth;
         private Paint mLinePaint;
+        private Paint mTextPaint;
+        private Paint mBallTextPaint;
         private SoundPool soundPool; 
         public static final int SOUND_BALL_CLINK = 1;
         private HashMap<Integer, Integer> soundPoolMap; 
+        private Calendar mCal = Calendar.getInstance();
+        private boolean clockOn = true;
         
         public BallsThread(SurfaceHolder surfaceHolder, Context app) {
             // get handles to some important objects
@@ -89,6 +94,16 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
             mLinePaint.setAntiAlias(true);
             mLinePaint.setARGB(255,167, 167, 167);
             mLinePaint.setStrokeWidth(2);
+            
+            mTextPaint = new Paint();
+            mTextPaint.setAntiAlias(true);
+            mTextPaint.setTextSize(50);
+            mTextPaint.setARGB(255,255, 0, 0);
+            
+            mBallTextPaint = new Paint();
+            mBallTextPaint.setAntiAlias(true);
+            mBallTextPaint.setTextSize(40);
+            mBallTextPaint.setARGB(255,255, 255, 255);
             
             initBalls();
             
@@ -188,10 +203,52 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
          * Draws the ship, fuel/speed bars, and background to the provided
          * Canvas.
          */
+        long lastClockUpdate = 0L;
+        String calTime="";
+       // String[] ballTexts = new String[5];
+        boolean showColon = true;
+        int clockXPos = 0;
+        private void updateClock()
+        {       
+        	if(lastClockUpdate < System.currentTimeMillis()-1000)
+        	{
+            	String calHour = "";
+            	String calMin = "";
+        		
+	        	calHour = mCal.get(Calendar.HOUR)+"";
+	        	if(calHour.equals("0") && mCal.get(Calendar.AM_PM)==Calendar.PM) calHour ="12";
+	        	//if(calHour.length()==1) calHour = " " +calHour;
+	        	calMin = mCal.get(Calendar.MINUTE)+"";
+	        	if(calMin.length()==1) calMin = "0"+calMin;
+	        	
+	           // ballTexts[0]=calHour.substring(0,1);
+	           // ballTexts[1] = calHour.substring(1,2);
+	           // ballTexts[2]= " :";
+	           // ballTexts[3] = calMin.substring(0,1);
+	           // ballTexts[4] = calMin.substring(1,2);
+	        	
+	        	calTime = calHour+(showColon?":":" ")+calMin + (mCal.get(Calendar.AM_PM)==Calendar.AM?"am":"pm");
+	        	lastClockUpdate = System.currentTimeMillis();
+	        	
+	        	showColon = !showColon;
+	        	
+	        	float[] charWidths = new float[]{0,0,0,0,0,0,0,0,0};
+	        	mTextPaint.getTextWidths(calTime, charWidths);
+	        	float textW = 0;
+	        	for(int i=0;i<charWidths.length;i++)
+	        	{
+	        		textW+=charWidths[i];
+	        	}
+	        	clockXPos = (480-((int) textW))/2;
+        	}
+        }
+        
         private void doDraw(Canvas canvas) {
             // Draw the background image. Operations on the Canvas accumulate
             // so this is like clearing the screen.
         	canvas.drawBitmap(mBackgroundImage, 0, 0, null);
+        	if(clockOn) updateClock();
+        	
     		for(int i=0;i<mNumberOfBalls;i++)
     		{
 	            int yTop = (int) (mBallCenterY[i] -mBallHalfWidth);
@@ -201,7 +258,11 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 	
 	            mBall.setBounds(xLeft, yTop, xLeft + mBallWidth, yTop + mBallHeight);
 	            mBall.draw(canvas);
+	            
+	           // canvas.drawText(ballTexts[i], xLeft+17, yTop+43, mBallTextPaint);
     		}
+    		
+    		if(clockOn) canvas.drawText(calTime, clockXPos, 305, mTextPaint);
         }
         
         public void setSoundState(boolean soundState)
@@ -361,17 +422,24 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 				float touchX = event.getX();
 				float touchY = event.getY();
 				
-				//has the user touched a ball?
-				for(int i=0;i<mNumberOfBalls;i++)
+				if(touchY>290) 
 				{
-					//the ball is currently covers mBallX, mBallY to mBallX+mBallWidth, mBallY+mBallHeight
-					if(touchX>=mBallCenterX[i]-mBallHalfWidth && touchX<=(mBallCenterX[i]+mBallHalfWidth)
-						&& touchY>=mBallCenterY[i]-mBallHalfWidth && touchY <= (mBallCenterY[i]+mBallHalfWidth))
+					clockOn = !clockOn;
+				}
+				else
+				{
+					//has the user touched a ball?
+					for(int i=0;i<mNumberOfBalls;i++)
 					{
-						//if so set flag and id of ball touched
-						mObjectTouched=true;
-						mObjectTouchedId = i;
-						return true;
+						//the ball is currently covers mBallX, mBallY to mBallX+mBallWidth, mBallY+mBallHeight
+						if(touchX>=mBallCenterX[i]-mBallHalfWidth && touchX<=(mBallCenterX[i]+mBallHalfWidth)
+							&& touchY>=mBallCenterY[i]-mBallHalfWidth && touchY <= (mBallCenterY[i]+mBallHalfWidth))
+						{
+							//if so set flag and id of ball touched
+							mObjectTouched=true;
+							mObjectTouchedId = i;
+							return true;
+						}
 					}
 				}
 			}else if(event.getAction() == MotionEvent.ACTION_MOVE)
