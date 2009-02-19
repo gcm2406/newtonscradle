@@ -14,10 +14,10 @@ import android.graphics.drawable.Drawable;
 import android.hardware.SensorListener;
 import android.hardware.SensorManager;
 import android.media.AudioManager;
-import android.media.MediaPlayer;
 import android.media.SoundPool;
 import android.util.AttributeSet;
 import android.util.FloatMath;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -521,7 +521,14 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         // start the thread here so that we don't busy-wait in run()
         // waiting for the surface to be created
         thread.setRunning(true);
-        thread.start();
+        try{thread.start();}catch(Exception e)
+        {
+        	Log.d("NEWTON", "NEWTON ERROR: creating new thread");
+        	thread = null;
+        	thread = new BallsThread(holder, getContext());
+        	thread.setRunning(true);
+        	thread.start();
+        }
     }
 
     /*
@@ -534,13 +541,17 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         // it might touch the Surface after we return and explode
         boolean retry = true;
         thread.setRunning(false);
+        Log.d("NEWTON", "NEWTON: Shutting down thread");
         while (retry) {
             try {
                 thread.join();
                 retry = false;
             } catch (InterruptedException e) {
+            	Log.d("NEWTON", "NEWTON ERROR: Interrupted closing thread",e);
             }
         }
+        
+        Log.d("NEWTON", "NEWTON: Thread shut down");
     }
     
 }
