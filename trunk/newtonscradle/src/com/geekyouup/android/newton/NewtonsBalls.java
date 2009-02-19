@@ -38,23 +38,6 @@ public class NewtonsBalls extends Activity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // tell system to use the layout defined in our XML file
-        setContentView(R.layout.main);
-        mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-        // get handles to the LunarView from XML, and its LunarThread
-        mBallsView = (BallsView) findViewById(R.id.myBalls);
-        mBallsThread = mBallsView.getThread();
-        
-        //Make sure the welcome message only appears on first launch
-        SharedPreferences settings = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        if(settings !=null)
-        {
-     	   isSoundOn = settings.getBoolean(PREFS_SOUND, false);
-     	   mBallsThread.setSoundState(isSoundOn);
-     	   
-     	   isAccelOn = settings.getBoolean(PREFS_ACCEL, true);
-     	   if(!isAccelOn) mBallsThread.setAccelerometer(false);
-        }
     }
     
     @Override
@@ -66,11 +49,6 @@ public class NewtonsBalls extends Activity {
         menu.add(0, MENU_BALLS, 3, "Balls").setIcon(android.R.drawable.ic_input_get);
         menu.add(0, MENU_ABOUT, 4, "About").setIcon(android.R.drawable.ic_menu_info_details);
         menu.add(0, MENU_EXIT, 5, "Exit").setIcon(android.R.drawable.ic_lock_power_off );
-    	
-        
-        //MenuInflater inflater = getMenuInflater();
-        //inflater.inflate(R.menu.checkable, menu);
-
         return true;
     }
     
@@ -170,6 +148,26 @@ public class NewtonsBalls extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        
+        // tell system to use the layout defined in our XML file
+        setContentView(R.layout.main);
+        
+        mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        // get handles to the LunarView from XML, and its LunarThread
+        mBallsView = (BallsView) findViewById(R.id.myBalls);
+        mBallsThread = mBallsView.getThread();
+        
+        //Make sure the welcome message only appears on first launch
+        SharedPreferences settings = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        if(settings !=null)
+        {
+     	   isSoundOn = settings.getBoolean(PREFS_SOUND, false);
+     	   mBallsThread.setSoundState(isSoundOn);
+     	   
+     	   isAccelOn = settings.getBoolean(PREFS_ACCEL, true);
+     	   if(!isAccelOn) mBallsThread.setAccelerometer(false);
+        }
+        
         if(isAccelOn)
         {
 	        mSensorManager.registerListener(mBallsThread,
