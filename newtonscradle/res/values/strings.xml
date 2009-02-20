@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 <string name="app_name">Newtons Cradle</string>
-<string name="about">A physics model of a Newton\'s Cradle.\nBalls are touch draggable to create motion and also affected by accelerometer.\n\nTwitter: @geekyouup\nSource at: http://newtonscradle.googlecode.com\n\nUse the flip option so that you can stand your G1 on a table.\n</string>
-<string name="about_title">Newton\'s Cradle v1.0.1</string>
+<string name="about">A physics model of a Newton\'s Cradle, with added Clock for Nat B.\nBalls are touch draggable to create motion and also affected by accelerometer.\n\nTwitter: @geekyouup\nSource at: http://newtonscradle.googlecode.com\n\nUse the flip option so that you can stand your G1 on a table.\n\nTap the bottom of the screen to turn clock on and off</string>
+<string name="about_title">Newton\'s Cradle v1.0.4</string>
 </resources>

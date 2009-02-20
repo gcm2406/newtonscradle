@@ -17,7 +17,6 @@ import android.media.AudioManager;
 import android.media.SoundPool;
 import android.util.AttributeSet;
 import android.util.FloatMath;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -45,6 +44,9 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         private boolean mRunning = false;
 
         
+        private static final float PI_F = (float) Math.PI;
+        private static final float HALF_PI_F = PI_F/2f;
+        
         int mNumberOfBalls = 5;
         final int mFixedBallWidth = 56;
         //rot centers should be calculated based on number of balls, currently hardcoded = bad
@@ -52,17 +54,16 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         private int mCenterOfRotationY=39;//
         private int[] mBallCenterX=new int[mNumberOfBalls];//{100};
         private int[] mBallCenterY=new int[mNumberOfBalls];//{220};
-    	private float angleOfGravityVelocity = -3.2f;
+    	private float angleOfGravityVelocity = PI_F;
         private static final float BALL_WEIGHT = 0.3f;
        	private boolean mObjectTouched = false;
     	private int mObjectTouchedId =-1;
     	private boolean isSoundOn = false;
     	private boolean isOrientNormal=true; //rotate around so we can stand device on surface
 
-        private float[] mBallVelocity=new float[mNumberOfBalls];//, approximate velocity at step i 
-        private float[] mBallAngle=new float[mNumberOfBalls];//0.4;//, approximate angular displacement at step i 
-     	final float g=SensorManager.STANDARD_GRAVITY;  // set gravitational acceleration parameter
-     	final float L=1;//, length of pendulum (input variable) 
+        private float[] mBallVelocity=new float[mNumberOfBalls];//velocity at step i 
+        private float[] mBallAngle=new float[mNumberOfBalls];// angular displacement at step i 
+     	final float g=SensorManager.STANDARD_GRAVITY;  // gravitational acceleration parameter
 		public int mStringLength=180; //default 180 pixels
         
         private int mBallWidth;
@@ -74,8 +75,10 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         private SoundPool soundPool; 
         public static final int SOUND_BALL_CLINK = 1;
         private HashMap<Integer, Integer> soundPoolMap; 
-        private int clockState = 1; //0=off, 1=on, 2=onballs
-        
+        private int clockState = 0; //0=off, 1=on, 2=onballs
+        private Context mContext;
+        private NewtonsBalls mApp;
+
         
         public BallsThread(SurfaceHolder surfaceHolder, Context app) {
             // get handles to some important objects
@@ -112,6 +115,8 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
             soundPoolMap.put(SOUND_BALL_CLINK, soundPool.load(getContext(), R.raw.clink, 1));
         }
 
+        public void setApp(NewtonsBalls app){this.mApp=app;}
+        
         private void initBalls()
         {
             //setup all the balls
@@ -120,50 +125,26 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
             	mBallCenterX[i] = mCenterOfRotationX[i];
             	mBallCenterY[i] = mCenterOfRotationY+mStringLength;
             	mBallVelocity[i]=0;
-            	mBallAngle[i]=-3.2f; //start angle of balls
+            	mBallAngle[i]=PI_F; //start angle of balls
             }
         }
         
-        int ballsState=0;
-        int numStates=3;
-        public void switchBalls()
-        {
-        	ballsState = (++ballsState)%numStates;
-        	switch(ballsState)
-        	{
-        		case 0:
-        			mBall = mContext.getResources().getDrawable(R.drawable.ball0);
-        			break;
-        		case 1:
-        			mBall = mContext.getResources().getDrawable(R.drawable.ball1);
-        			break;
-        		case 2:
-        			mBall = mContext.getResources().getDrawable(R.drawable.ball2);
-        			break;
-        	}
-        }
         
         /**
          * Starts the game, setting parameters for the current difficulty.
          */
         public void doStart() {
-            synchronized (mSurfaceHolder) {
-                //mLastTime = System.currentTimeMillis() + 100;
-            	mRunning=true;
-            }
+            synchronized (mSurfaceHolder) { mRunning=true; }
         }
         
         public void doPause() {
-            synchronized (mSurfaceHolder) {
-                //mLastTime = System.currentTimeMillis() + 100;
-            	mRunning=false;
-            }
+            synchronized (mSurfaceHolder) { mRunning=false;  }
         }
 
         @Override
         public void run() {
             while (mRun) {
-            	if(mRunning)
+            	if(mRunning) //allow pause without loss of thread
             	{
 	                Canvas c = null;
 	                try {
@@ -224,11 +205,21 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 	        	calTime = calHour+(showColon?":":" ")+calMin + (mCal.get(Calendar.AM_PM)==Calendar.AM?"am":"pm");
 
 	        	if(calHour.length()==1) calHour = " " +calHour;
-	            ballTexts[0]=calHour.substring(0,1);
-	            ballTexts[1] = calHour.substring(1,2);
-	            ballTexts[2]= " :";
-	            ballTexts[3] = calMin.substring(0,1);
-	            ballTexts[4] = calMin.substring(1,2);
+	        	if(isOrientNormal)
+	            {
+		        	ballTexts[0]=calHour.substring(0,1);
+		            ballTexts[1] = calHour.substring(1,2);
+		            ballTexts[2]= " :";
+		            ballTexts[3] = calMin.substring(0,1);
+		            ballTexts[4] = calMin.substring(1,2);
+	            }else
+	            {
+		        	ballTexts[4]=calHour.substring(0,1);
+		            ballTexts[3] = calHour.substring(1,2);
+		            ballTexts[2]= " :";
+		            ballTexts[1] = calMin.substring(0,1);
+		            ballTexts[0] = calMin.substring(1,2);
+	            }
 
 	        	lastClockUpdate = System.currentTimeMillis();
 	        	showColon = !showColon;
@@ -249,21 +240,37 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
             // so this is like clearing the screen.
         	canvas.drawBitmap(mBackgroundImage, 0, 0, null);
         	if(clockState>0) updateClock();
-        	
+        	int extraRotation = isOrientNormal?180:0;
     		for(int i=0;i<mNumberOfBalls;i++)
     		{
-	            int yTop = (int) (mBallCenterY[i] -mBallHalfWidth);
-	            int xLeft = (int) (mBallCenterX[i] - mBallHalfWidth);
-	
-	            canvas.drawLine(mCenterOfRotationX[i], mCenterOfRotationY,  xLeft + mBallHalfWidth, yTop+mBallHalfWidth, mLinePaint);
-	
-	            mBall.setBounds(xLeft, yTop, xLeft + mBallWidth, yTop + mBallHeight);
-	            mBall.draw(canvas);
+    			int xCentre = mBallCenterX[i];
+    			int yCentre = mBallCenterY[i];
+    			
+    			int xLeft = (int) (xCentre - mBallHalfWidth);
+	            int yTop = (int) (yCentre -mBallHalfWidth);
 	            
-	           if(clockState==2) canvas.drawText(ballTexts[i], xLeft+17, yTop+43, mBallTextPaint);
+	            canvas.drawLine(mCenterOfRotationX[i], mCenterOfRotationY,  xCentre, yCentre, mLinePaint);
+	            
+	            canvas.save();
+	            mBall.setBounds(xLeft, yTop, xLeft + mBallWidth, yTop + mBallHeight);
+	            //roate the canvas the opposite way to the balls, so when rotated back it is right.
+	            canvas.rotate(extraRotation+(float) Math.toDegrees(mBallAngle[i]),xCentre, yCentre);
+	            mBall.draw(canvas);
+	            if(clockState==2) canvas.drawText(ballTexts[i], xLeft+17, yTop+43, mBallTextPaint);
+	            canvas.restore();
     		}
     		
-    		if(clockState==1) canvas.drawText(calTime, clockXPos, 305, mTextPaint);
+    		if(clockState==1)
+    		{
+    			if(isOrientNormal) canvas.drawText(calTime, clockXPos, 305, mTextPaint);
+    			else
+    			{
+    	            canvas.save();
+    	            canvas.rotate(180, 240,160);
+    	            canvas.drawText(calTime, clockXPos, 305, mTextPaint);
+     	            canvas.restore();
+    			}
+    		}
         }
         
         public void setSoundState(boolean soundState)
@@ -289,7 +296,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 			            //0.995 for constant drag, should be related to 0.5*sq(v)
 			            mBallVelocity[i]=mBallVelocity[i]*0.998f; //this should be related to square of velocity
 						
-			            mBallAngle[i] = mBallAngle[i] + mBallVelocity[i]*elapsed/L;
+			            mBallAngle[i] = mBallAngle[i] + mBallVelocity[i]*elapsed;
 	    			}
 	    		    
 		        	mBallCenterX[i] = calcXCoordOfBall(i); 
@@ -378,9 +385,11 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         	return (int) (-FloatMath.cos(mBallAngle[ballId])*mStringLength + mCenterOfRotationY);
         }
         
-        public void flipOrientation()
+        public void setClockState(int clockState){this.clockState=clockState;}
+        public void setBallsGraphic(int ballResource)  {mBall = mContext.getResources().getDrawable(ballResource);}
+        public void setOrientation(boolean isOrientNormal)
         {
-        	isOrientNormal=!isOrientNormal;
+        	this.isOrientNormal=isOrientNormal;
             Matrix matrix = new Matrix();
             matrix.postRotate(180);
             mBackgroundImage = Bitmap.createBitmap(mBackgroundImage, 0, 0,480, 320, matrix, false); 
@@ -393,11 +402,11 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
             	mCenterOfRotationY = 320-39;
             	mStringLength=-180;
             }
-
         }
+        
         public void setAccelerometer(boolean on)
         {
-        	if(!on) angleOfGravityVelocity=-3.2f;
+        	if(!on) angleOfGravityVelocity=PI_F;
         }
         
     	public void onAccuracyChanged(int arg0, int arg1) {}
@@ -411,8 +420,8 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
     			float gravityOffsetY = (isOrientNormal?values[4]:-values[4]);
 
     			//sort out the changed angle of gravity, the Y Offset switch is due to the graph of tan(theta) jumping
-    			if(gravityOffsetY>0) angleOfGravityVelocity = (float) (-Math.atan(gravityOffsetX/gravityOffsetY)-Math.PI/2);
-    			else angleOfGravityVelocity = (float) (-Math.atan(gravityOffsetX/gravityOffsetY)+(Math.PI/2));
+    			if(gravityOffsetY>0) angleOfGravityVelocity = ((float) (-Math.atan(gravityOffsetX/gravityOffsetY))-HALF_PI_F);
+    			else angleOfGravityVelocity = ((float) (-Math.atan(gravityOffsetX/gravityOffsetY))+HALF_PI_F);
      		}
     	}
 
@@ -423,9 +432,10 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 				float touchX = event.getX();
 				float touchY = event.getY();
 				
-				if(touchY>290) 
+				if((isOrientNormal && touchY>290) || (!isOrientNormal&&touchY<30)) 
 				{
 					clockState = (clockState+1)%3;
+					if(mApp!=null)mApp.saveClockState(clockState);
 				}
 				else
 				{
@@ -455,7 +465,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 					if(!isOrientNormal) {transX=-transX; transY=-transY;}
 					
 					//figure out the angle the ball is now at
-	    			if(transY>0) mBallAngle[mObjectTouchedId] = (float) (-Math.atan(transX/transY)+Math.PI);
+	    			if(transY>0) mBallAngle[mObjectTouchedId] = ((float) (-Math.atan(transX/transY))+PI_F);
 	    			else mBallAngle[mObjectTouchedId] = (float) -Math.atan((transX/transY));
 
 	    			return true;
@@ -473,43 +483,29 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
     }
 
     /** Handle to the application context, used to e.g. fetch Drawables. */
-    private Context mContext;
     private BallsThread thread;
 
-    public BallsView(Context context, AttributeSet attrs) {
-        super(context, attrs);
+    public BallsView(Context app, AttributeSet attrs) {
+        super(app, attrs);
 
         // register our interest in hearing about changes to our surface
         SurfaceHolder holder = getHolder();
         holder.addCallback(this);
 
         // create thread only; it's started in surfaceCreated()
-        thread = new BallsThread(holder, context);
+        thread = new BallsThread(holder, app);
         setOnTouchListener(thread);
     }
 
     /**
-     * Fetches the animation thread corresponding to this LunarView.
-     * 
      * @return the animation thread
      */
     public BallsThread getThread() {
         return thread;
     }
 
-    /**
-     * Standard window-focus override. Notice focus lost so we can pause on
-     * focus lost. e.g. user switches to take a call.
-     */
-    @Override
-    public void onWindowFocusChanged(boolean hasWindowFocus) {
-        //if (!hasWindowFocus) thread.doPause();
-       // else thread.resume();
-    }
-
     /* Callback invoked when the surface dimensions change. */
-    public void surfaceChanged(SurfaceHolder holder, int format, int width,
-            int height) {
+    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
         thread.setSurfaceSize(width, height);
     }
 
@@ -521,14 +517,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         // start the thread here so that we don't busy-wait in run()
         // waiting for the surface to be created
         thread.setRunning(true);
-        try{thread.start();}catch(Exception e)
-        {
-        	Log.d("NEWTON", "NEWTON ERROR: creating new thread");
-        	thread = null;
-        	thread = new BallsThread(holder, getContext());
-        	thread.setRunning(true);
-        	thread.start();
-        }
+        thread.start();
     }
 
     /*
@@ -541,17 +530,12 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         // it might touch the Surface after we return and explode
         boolean retry = true;
         thread.setRunning(false);
-        Log.d("NEWTON", "NEWTON: Shutting down thread");
         while (retry) {
             try {
                 thread.join();
                 retry = false;
-            } catch (InterruptedException e) {
-            	Log.d("NEWTON", "NEWTON ERROR: Interrupted closing thread",e);
-            }
+            } catch (InterruptedException e) {}
         }
-        
-        Log.d("NEWTON", "NEWTON: Thread shut down");
     }
     
 }
