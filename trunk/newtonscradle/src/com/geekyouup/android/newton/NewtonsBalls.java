@@ -29,9 +29,14 @@ public class NewtonsBalls extends Activity {
     private static final int DIALOG_WELCOME=0;
     private boolean isSoundOn = false;
     private boolean isAccelOn = true;
+    private boolean isOrientNormal = true;
+    private int mBallsState = 0;
     private static final String PREFS_NAME ="GYUNEWTON";
     private static final String PREFS_SOUND ="SOUNDON";
     private static final String PREFS_ACCEL ="ACCELON";
+    private static final String PREFS_CLOCK ="CLOCK";
+    private static final String PREFS_BALLS ="BALLS";
+    private static final String PREFS_ORIENT ="ORIENTATION";
     private MenuItem mSoundMenuItem;
     private MenuItem mAccelMenuItem;
     
@@ -63,13 +68,7 @@ public class NewtonsBalls extends Activity {
     		Toast.makeText(this, "Sound " + (isSoundOn?"on":"off"), Toast.LENGTH_SHORT).show();
     		
             //Make sure the welcome message only appears on first launch
-            SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
-            if(settings !=null)
-            {
-	           SharedPreferences.Editor editor = settings.edit();
-	           editor.putBoolean(PREFS_SOUND, isSoundOn);
-	           editor.commit();
-            }
+            saveBoolean(PREFS_SOUND, isSoundOn);
     		return true;
     	}else if(item.getItemId() == MENU_TOGGLEACCEL)
     	{
@@ -89,16 +88,12 @@ public class NewtonsBalls extends Activity {
     		
     		mAccelMenuItem.setIcon(isAccelOn?android.R.drawable.button_onoff_indicator_on:android.R.drawable.button_onoff_indicator_off);
     		Toast.makeText(this, "Accelerometer " + (isAccelOn?"on":"off"), Toast.LENGTH_SHORT).show();
-            SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
-            if(settings !=null)
-            {
-	           SharedPreferences.Editor editor = settings.edit();
-	           editor.putBoolean(PREFS_ACCEL, isAccelOn);
-	           editor.commit();
-            }
+            saveBoolean(PREFS_ACCEL, isAccelOn);
     	}else if(item.getItemId() == MENU_FLIP_ORIENTATION)
     	{
-    		mBallsThread.flipOrientation();
+    		isOrientNormal = !isOrientNormal;
+    		mBallsThread.setOrientation(isOrientNormal);
+    		saveBoolean(PREFS_ORIENT, isOrientNormal);
     		return true;
     	}else if(item.getItemId() == MENU_ABOUT)
    	 	{
@@ -106,7 +101,7 @@ public class NewtonsBalls extends Activity {
     		return true;
    	 	}else if(item.getItemId() == MENU_BALLS)
    	 	{
-   	 		mBallsThread.switchBalls();
+   	 		nextBallsGraphic();
     		return true;
    	 	}else if(item.getItemId() == MENU_EXIT)
    	 	{
@@ -166,6 +161,15 @@ public class NewtonsBalls extends Activity {
      	   
      	   isAccelOn = settings.getBoolean(PREFS_ACCEL, true);
      	   if(!isAccelOn) mBallsThread.setAccelerometer(false);
+     	   
+     	   mBallsState = settings.getInt(PREFS_BALLS, 0);
+     	   setBallsGraphic(mBallsState);
+     	   
+     	   isOrientNormal = settings.getBoolean(PREFS_ORIENT, true);
+     	   if(!isOrientNormal) mBallsThread.setOrientation(isOrientNormal);
+     	   mBallsThread.setApp(this);
+     	   
+     	   mBallsThread.setClockState(settings.getInt(PREFS_CLOCK, 0));
         }
         
         if(isAccelOn)
@@ -176,5 +180,44 @@ public class NewtonsBalls extends Activity {
         }
         
         mBallsThread.doStart();
+    }
+    
+    public void saveClockState(int clockState) {saveInt(PREFS_CLOCK,clockState);}
+    public void nextBallsGraphic()
+    {
+    	mBallsState = (++mBallsState)%3;
+    	setBallsGraphic(mBallsState);
+    }
+    
+    private void setBallsGraphic(int ballState)
+    {
+    	int ballGraphic = R.drawable.ball0;
+    	if(ballState==1) ballGraphic=R.drawable.ball1;
+    	else if(ballState==2) ballGraphic=R.drawable.ball2;
+
+    	mBallsThread.setBallsGraphic(ballGraphic);
+    	saveInt(PREFS_BALLS, ballState);
+    }
+    
+    private void saveInt(String key, int value)
+    {
+        SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+        if(settings !=null)
+        {
+           SharedPreferences.Editor editor = settings.edit();
+           editor.putInt(key, value);
+           editor.commit();
+        }
+    }
+    
+    private void saveBoolean(String key, boolean value)
+    {
+        SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+        if(settings !=null)
+        {
+           SharedPreferences.Editor editor = settings.edit();
+           editor.putBoolean(key, value);
+           editor.commit();
+        }
     }
 }

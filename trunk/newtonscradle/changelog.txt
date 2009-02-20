@@ -1,3 +1,14 @@
+v1.0.4
+Force close during onResume fixed
+Saves states for orientation, clock and ball graphics
+Balls rotate realistically when swinging.
+
+v1.0.3
+Bugfix: Time on clock updates 
+
+v1.0.2
+Clock added for Nat B - clock can be at bottom of screen or on balls
+
 v1.0.1
 Toggle accelerometer on and off
 Physics model switched from double to float and Math package to FloatMath package for performance gains.
