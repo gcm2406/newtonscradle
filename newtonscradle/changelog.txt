@@ -1,4 +1,4 @@
-v1.0.4
+v1.1.0
 Force close during onResume fixed
 Saves states for orientation, clock and ball graphics
 Balls rotate realistically when swinging.
