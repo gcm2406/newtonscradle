@@ -293,36 +293,35 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         
         private float hitOccured=-1; 
         private void updatePhysics() {
-
-        		//do the collision detection
-        		for(int i=0;i<mNumberOfBalls;i++)
-        		{
-		        	//physics of the balls for ones not being controlled by touch
-	        		boolean objectControlledByTouch = (mObjectTouched && mObjectTouchedId==i);
-	    		    if(!objectControlledByTouch)
-	    			{
-			            float elapsed = 0.025f;//(now-mLastTime);
-			            
-			            //velocity affected by angle of gravity
-			            mBallVelocity[i] = mBallVelocity[i] - g*FloatMath.sin(mBallAngle[i]-angleOfGravityVelocity)*elapsed;
-						
-			            //0.995 for constant drag, should be related to 0.5*sq(v)
-			           // mBallVelocity[i]=mBallVelocity[i]*0.999f; //this should be related to square of velocity
-						
-			            mBallAngle[i] = mBallAngle[i] + mBallVelocity[i]*elapsed*BALL_WEIGHT;
-	    			}
-	    		    
-		        	mBallCenterX[i] = calcXCoordOfBall(i); 
-		        	mBallCenterY[i] = calcYCoordOfBall(i);
-		        	
-        			hitTestBall(i);
-        		}
-        		
-        		if(hitOccured!=-1)  //hitoccured is set during hittest
-        		{
-        			playSound(SOUND_BALL_HIT, hitOccured);
-        			hitOccured=-1;
-        		}
+    		//do the collision detection
+    		for(int i=0;i<mNumberOfBalls;i++)
+    		{
+	        	//physics of the balls for ones not being controlled by touch
+        		boolean objectControlledByTouch = (mObjectTouched && mObjectTouchedId==i);
+    		    if(!objectControlledByTouch)
+    			{
+		            float elapsed = 0.025f;//(now-mLastTime);
+		            
+		            //velocity affected by angle of gravity
+		            mBallVelocity[i] = mBallVelocity[i] - g*FloatMath.sin(mBallAngle[i]-angleOfGravityVelocity)*elapsed;
+					
+		            //0.995 for constant drag, should be related to 0.5*sq(v)
+		           // mBallVelocity[i]=mBallVelocity[i]*0.999f; //this should be related to square of velocity
+					
+		            mBallAngle[i] = mBallAngle[i] + mBallVelocity[i]*elapsed*BALL_WEIGHT;
+    			}
+    		    
+	        	mBallCenterX[i] = calcXCoordOfBall(i); 
+	        	mBallCenterY[i] = calcYCoordOfBall(i);
+	        	
+    			hitTestBall(i);
+    		}
+    		
+    		if(hitOccured!=-1)  //hitoccured is set during hittest
+    		{
+    			playSound(SOUND_BALL_HIT, hitOccured);
+    			hitOccured=-1;
+    		}
         }
         
         public void hitTestBall(int testBall)
@@ -347,7 +346,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         		{
         			if(isSoundOn && mVelocityDiff>0.4)
         			{        				
-        				hitOccured = mVelocityDiff/10;
+        				hitOccured = mVelocityDiff/10.0f;
         				if(hitOccured >1) hitOccured=1;
         			}
         			
@@ -392,7 +391,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         			
         			if(checkNext)
         			{
-		     			if(!mObjectTouched && mVelocityDiff > 0 && testBall>0) hitTestBallOverRange(testBall, testBall-1, testBall, false);
+		     			if(!mObjectTouched && mVelocityDiff > 0 && testBall>1) hitTestBallOverRange(testBall, testBall-2, testBall-1, true);
 	        			else if(!mObjectTouched && mVelocityDiff < 0 && (testBall<mNumberOfBalls-1)) hitTestBallOverRange(testBall, testBall, testBall+1, false);
         			}
         		}
@@ -403,7 +402,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         	if(vol > 0.3)
         	{
 	            AudioManager mgr = (AudioManager)getContext().getSystemService(Context.AUDIO_SERVICE);
-	            float streamVolume = mgr.getStreamVolume(AudioManager.STREAM_MUSIC)*vol;
+	            float streamVolume = ((float) mgr.getStreamVolume(AudioManager.STREAM_MUSIC))*vol;
 	            soundPool.play(soundPoolMap.get(sound), streamVolume, streamVolume, 1, 0, 1f);
         	}
         } 
