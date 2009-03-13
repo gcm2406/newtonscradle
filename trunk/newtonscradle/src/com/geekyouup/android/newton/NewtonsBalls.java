@@ -9,6 +9,7 @@ import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.hardware.SensorManager;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
@@ -40,9 +41,13 @@ public class NewtonsBalls extends Activity {
     private MenuItem mSoundMenuItem;
     private MenuItem mAccelMenuItem;
     
+	private PowerManager mPowerMan;
+	private PowerManager.WakeLock mWakeLock;
+    
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        mPowerMan = (PowerManager) getSystemService(Context.POWER_SERVICE);
     }
     
     @Override
@@ -138,6 +143,7 @@ public class NewtonsBalls extends Activity {
         super.onPause();
         mSensorManager.unregisterListener(mBallsThread);
         mBallsThread.doPause();
+        mWakeLock.release();
     }
     
     @Override
@@ -156,13 +162,13 @@ public class NewtonsBalls extends Activity {
         SharedPreferences settings = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         if(settings !=null)
         {
-     	   isSoundOn = settings.getBoolean(PREFS_SOUND, false);
+     	   isSoundOn = settings.getBoolean(PREFS_SOUND, true);
      	   mBallsThread.setSoundState(isSoundOn);
      	   
-     	   isAccelOn = settings.getBoolean(PREFS_ACCEL, true);
+     	   isAccelOn = settings.getBoolean(PREFS_ACCEL, false);
      	   if(!isAccelOn) mBallsThread.setAccelerometer(false);
      	   
-     	   mBallsState = settings.getInt(PREFS_BALLS, 0);
+     	   mBallsState = settings.getInt(PREFS_BALLS, 2);
      	   setBallsGraphic(mBallsState);
      	   
      	   isOrientNormal = settings.getBoolean(PREFS_ORIENT, true);
@@ -180,6 +186,9 @@ public class NewtonsBalls extends Activity {
         }
         
         mBallsThread.doStart();
+        
+        mWakeLock = mPowerMan.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "Stopwatch");
+        mWakeLock.acquire();
     }
     
     public void saveClockState(int clockState) {saveInt(PREFS_CLOCK,clockState);}
