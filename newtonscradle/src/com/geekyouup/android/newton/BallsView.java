@@ -55,17 +55,22 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         private int[] mBallCenterX=new int[mNumberOfBalls];//{100};
         private int[] mBallCenterY=new int[mNumberOfBalls];//{220};
     	private float angleOfGravityVelocity = PI_F;
-        private static final float BALL_WEIGHT = 0.3f;
+        
+    	private static final float BALL_WEIGHT = 0.1f;
+        private float VELOCITY_LOSS_HIT = 0.98f;
+        private float VELOCITY_LOSS_LOW_SPEED_HIT = 0.4f;
+        private float LOW_SPEED = 0.05f;
+        final float g=40;//SensorManager.STANDARD_GRAVITY;  // gravitational acceleration parameter
+        
        	private boolean mObjectTouched = false;
     	private int mObjectTouchedId =-1;
     	private boolean isSoundOn = false;
     	private boolean isOrientNormal=true; //rotate around so we can stand device on surface
-
+    	private boolean mFastMode = true;
+    	
         private float[] mBallVelocity=new float[mNumberOfBalls];//velocity at step i 
         private float[] mBallAngle=new float[mNumberOfBalls];// angular displacement at step i 
-     	final float g=SensorManager.STANDARD_GRAVITY;  // gravitational acceleration parameter
 		public int mStringLength=180; //default 180 pixels
-        
         private int mBallWidth;
         private int mBallHeight;
         private int mBallHalfWidth;
@@ -73,12 +78,11 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         private Paint mTextPaint;
         private Paint mBallTextPaint;
         private SoundPool soundPool; 
-        public static final int SOUND_BALL_CLINK = 1;
+        public static final int SOUND_BALL_HIT = 1;
         private HashMap<Integer, Integer> soundPoolMap; 
         private int clockState = 0; //0=off, 1=on, 2=onballs
         private Context mContext;
         private NewtonsBalls mApp;
-
         
         public BallsThread(SurfaceHolder surfaceHolder, Context app) {
             // get handles to some important objects
@@ -86,7 +90,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
             mContext = app;
 
             Resources res = mContext.getResources();
-            mBall = mContext.getResources().getDrawable(R.drawable.ball0);
+            mBall = mContext.getResources().getDrawable(R.drawable.ball2);
             mBackgroundImage = BitmapFactory.decodeResource(res,R.drawable.background);
             mBallWidth = mBall.getIntrinsicWidth();
             mBallHeight = mBall.getIntrinsicHeight();
@@ -112,7 +116,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
             
             soundPool = new SoundPool(10, AudioManager.STREAM_MUSIC, 100);
             soundPoolMap = new HashMap<Integer, Integer>();
-            soundPoolMap.put(SOUND_BALL_CLINK, soundPool.load(getContext(), R.raw.clink, 1));
+            soundPoolMap.put(SOUND_BALL_HIT, soundPool.load(getContext(), R.raw.hit, 1));
         }
 
         public void setApp(NewtonsBalls app){this.mApp=app;}
@@ -239,6 +243,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
             // Draw the background image. Operations on the Canvas accumulate
             // so this is like clearing the screen.
         	canvas.drawBitmap(mBackgroundImage, 0, 0, null);
+        	
         	if(clockState>0) updateClock();
         	int extraRotation = isOrientNormal?180:0;
     		for(int i=0;i<mNumberOfBalls;i++)
@@ -251,13 +256,21 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 	            
 	            canvas.drawLine(mCenterOfRotationX[i], mCenterOfRotationY,  xCentre, yCentre, mLinePaint);
 	            
-	            canvas.save();
-	            mBall.setBounds(xLeft, yTop, xLeft + mBallWidth, yTop + mBallHeight);
-	            //roate the canvas the opposite way to the balls, so when rotated back it is right.
-	            canvas.rotate(extraRotation+(float) Math.toDegrees(mBallAngle[i]),xCentre, yCentre);
-	            mBall.draw(canvas);
+	            if(mFastMode)
+	            {
+		            mBall.setBounds(xLeft, yTop, xLeft + mBallWidth, yTop + mBallHeight);
+		            //roate the canvas the opposite way to the balls, so when rotated back it is right.
+		            mBall.draw(canvas);
+	            }else
+	            {
+	            	canvas.save();
+		            mBall.setBounds(xLeft, yTop, xLeft + mBallWidth, yTop + mBallHeight);
+		            //roate the canvas the opposite way to the balls, so when rotated back it is right.
+		            canvas.rotate(extraRotation+(float) Math.toDegrees(mBallAngle[i]),xCentre, yCentre);
+		            mBall.draw(canvas);
+		            canvas.restore();
+	            }
 	            if(clockState==2) canvas.drawText(ballTexts[i], xLeft+17, yTop+43, mBallTextPaint);
-	            canvas.restore();
     		}
     		
     		if(clockState==1)
@@ -291,12 +304,12 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 			            float elapsed = 0.025f;//(now-mLastTime);
 			            
 			            //velocity affected by angle of gravity
-			            mBallVelocity[i] = mBallVelocity[i] - BALL_WEIGHT*g*FloatMath.sin(mBallAngle[i]-angleOfGravityVelocity)*elapsed;
+			            mBallVelocity[i] = mBallVelocity[i] - g*FloatMath.sin(mBallAngle[i]-angleOfGravityVelocity)*elapsed;
 						
 			            //0.995 for constant drag, should be related to 0.5*sq(v)
-			            mBallVelocity[i]=mBallVelocity[i]*0.998f; //this should be related to square of velocity
+			           // mBallVelocity[i]=mBallVelocity[i]*0.999f; //this should be related to square of velocity
 						
-			            mBallAngle[i] = mBallAngle[i] + mBallVelocity[i]*elapsed;
+			            mBallAngle[i] = mBallAngle[i] + mBallVelocity[i]*elapsed*BALL_WEIGHT;
 	    			}
 	    		    
 		        	mBallCenterX[i] = calcXCoordOfBall(i); 
@@ -307,31 +320,34 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         		
         		if(hitOccured!=-1)  //hitoccured is set during hittest
         		{
-        			playSound(SOUND_BALL_CLINK, hitOccured);
+        			playSound(SOUND_BALL_HIT, hitOccured);
         			hitOccured=-1;
         		}
         }
         
-        public void hitTestBall(int testBall) //only need to test 2 surrounding balls really
+        public void hitTestBall(int testBall)
+        {
+        	hitTestBallOverRange(testBall,testBall>0?testBall-1:0,testBall<mNumberOfBalls-1?testBall+1:mNumberOfBalls, true);
+        }
+        
+        public void hitTestBallOverRange(int testBall,int start, int end, boolean checkNext) //only need to test 2 surrounding balls really
         {
         	//hit testing the balls in left to right order
         	// can use this to optimize as unlikely collisions are not checked 
-        	//int endPoint = testBall<mNumberOfBalls-1?testBall+2:mNumberOfBalls;
-        	for(int j=0;j<mNumberOfBalls;j++)
+        	for(int j=start;j<end;j++)
         	{
         		if(testBall==j) continue; //skip hit test with self
         		
         		//if distance between the 2 centers of the balls is <= to ball width then switch their momentums
         		double mDistBetweenBalls = Math.sqrt((Math.pow(mBallCenterX[j]-mBallCenterX[testBall],2)
         										+Math.pow(mBallCenterY[j]-mBallCenterY[testBall], 2)));
-        		
+        		float mVelocityDiff = (float) Math.abs(mBallVelocity[testBall]-mBallVelocity[j]);       		
         		//tranfer momentum between collided and moving balls
-        		if(mDistBetweenBalls<mBallWidth)
+        		if(mDistBetweenBalls<mBallWidth && (mObjectTouched || mVelocityDiff>0.2))
         		{
-
-        			if(isSoundOn)
+        			if(isSoundOn && mVelocityDiff>0.4)
         			{        				
-        				hitOccured = (float) (Math.abs(mBallVelocity[j])+Math.abs(mBallVelocity[testBall]))/8;
+        				hitOccured = mVelocityDiff/10;
         				if(hitOccured >1) hitOccured=1;
         			}
         			
@@ -344,33 +360,52 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         				       				
     		        	mBallCenterX[j] = calcXCoordOfBall(j); 
     		        	mBallCenterY[j] = calcYCoordOfBall(j);
-        			}else if(mObjectTouched && (mObjectTouchedId==j || (mObjectTouchedId>testBall && j>testBall) ))
+        			}else if(mObjectTouched && (mObjectTouchedId==j || (mObjectTouchedId<j && Math.abs(mBallAngle[mObjectTouchedId]-mBallAngle[j])<0.1)))
         			{
-	        			float velJ = mBallVelocity[j];
-	        			mBallVelocity[j] = mBallVelocity[testBall];
-	        			mBallVelocity[testBall] = velJ;
         				mBallAngle[testBall] = mBallAngle[j];
+        				mBallVelocity[testBall] = 0;
+	        			mBallVelocity[j] = 0;
         				
+    		        	mBallCenterX[testBall] = calcXCoordOfBall(testBall);
+    		        	mBallCenterY[testBall] = calcYCoordOfBall(testBall);
+        			}else if( (j>testBall && mBallVelocity[j]>0) || (j<testBall && mBallVelocity[testBall]>0) )
+        			{
+	        			float velTB = mBallVelocity[testBall];
+	        			float velLoss = Math.abs(velTB+mBallVelocity[j])<LOW_SPEED? VELOCITY_LOSS_LOW_SPEED_HIT:VELOCITY_LOSS_HIT;
+	        			mBallVelocity[testBall] = mBallVelocity[j]*velLoss;
+	        			mBallVelocity[j] = velTB*velLoss;
+        				mBallAngle[testBall] = mBallAngle[j];
+    		        	
     		        	mBallCenterX[testBall] = calcXCoordOfBall(testBall); 
     		        	mBallCenterY[testBall] = calcYCoordOfBall(testBall);
-        			}else
+            		}else
         			{
 	        			float velJ = mBallVelocity[j];
-	        			mBallVelocity[j] = mBallVelocity[testBall];
-	        			mBallVelocity[testBall] = velJ;
+	        			float velLoss = Math.abs(velJ+mBallVelocity[testBall])<LOW_SPEED? VELOCITY_LOSS_LOW_SPEED_HIT:VELOCITY_LOSS_HIT;
+	        			mBallVelocity[j] = mBallVelocity[testBall]*velLoss;
+	        			mBallVelocity[testBall] = velJ*velLoss;
         				mBallAngle[j] = mBallAngle[testBall];
     		        	
     		        	mBallCenterX[j] = calcXCoordOfBall(j); 
     		        	mBallCenterY[j] = calcYCoordOfBall(j);
+        			}
+        			
+        			if(checkNext)
+        			{
+		     			if(!mObjectTouched && mVelocityDiff > 0 && testBall>0) hitTestBallOverRange(testBall, testBall-1, testBall, false);
+	        			else if(!mObjectTouched && mVelocityDiff < 0 && (testBall<mNumberOfBalls-1)) hitTestBallOverRange(testBall, testBall, testBall+1, false);
         			}
         		}
         	}
         }
         
         public void playSound(int sound, float vol) {
-            AudioManager mgr = (AudioManager)getContext().getSystemService(Context.AUDIO_SERVICE);
-            float streamVolume = mgr.getStreamVolume(AudioManager.STREAM_MUSIC)*vol;
-            soundPool.play(soundPoolMap.get(sound), streamVolume, streamVolume, 1, 0, 1f);
+        	if(vol > 0.3)
+        	{
+	            AudioManager mgr = (AudioManager)getContext().getSystemService(Context.AUDIO_SERVICE);
+	            float streamVolume = mgr.getStreamVolume(AudioManager.STREAM_MUSIC)*vol;
+	            soundPool.play(soundPoolMap.get(sound), streamVolume, streamVolume, 1, 0, 1f);
+        	}
         } 
         
         //calculates balls x coordinate based on its angle and string hanging point
@@ -386,7 +421,12 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         }
         
         public void setClockState(int clockState){this.clockState=clockState;}
-        public void setBallsGraphic(int ballResource)  {mBall = mContext.getResources().getDrawable(ballResource);}
+        public void setBallsGraphic(int ballResource, boolean isFastMode) 
+        {
+        	mBall = mContext.getResources().getDrawable(ballResource);
+        	mFastMode = isFastMode;
+        }
+        
         public void setOrientation(boolean isOrientNormal)
         {
         	this.isOrientNormal=isOrientNormal;
@@ -480,6 +520,11 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 			}
 			return true;
 		}
+		
+		public void shutdown()
+		{
+			try{if(soundPool != null) soundPool.release();}catch(Exception e){}
+		}
     }
 
     /** Handle to the application context, used to e.g. fetch Drawables. */
@@ -528,7 +573,8 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
     public void surfaceDestroyed(SurfaceHolder holder) {
         // we have to tell thread to shut down & wait for it to finish, or else
         // it might touch the Surface after we return and explode
-        boolean retry = true;
+    	thread.shutdown();
+    	boolean retry = true;
         thread.setRunning(false);
         while (retry) {
             try {
