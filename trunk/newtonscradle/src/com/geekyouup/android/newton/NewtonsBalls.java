@@ -30,7 +30,7 @@ public class NewtonsBalls extends Activity {
     private boolean isSoundOn = false;
     private boolean isAccelOn = true;
     private boolean isOrientNormal = true;
-    private int mBallsState = 0;
+    private int mBallsState = 2;
     private static final String PREFS_NAME ="GYUNEWTON";
     private static final String PREFS_SOUND ="SOUNDON";
     private static final String PREFS_ACCEL ="ACCELON";
@@ -195,7 +195,7 @@ public class NewtonsBalls extends Activity {
     	if(ballState==1) ballGraphic=R.drawable.ball1;
     	else if(ballState==2) ballGraphic=R.drawable.ball2;
 
-    	mBallsThread.setBallsGraphic(ballGraphic);
+    	mBallsThread.setBallsGraphic(ballGraphic, ballState==2);
     	saveInt(PREFS_BALLS, ballState);
     }
     
