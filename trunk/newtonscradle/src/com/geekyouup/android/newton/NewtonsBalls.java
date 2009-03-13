@@ -162,10 +162,10 @@ public class NewtonsBalls extends Activity {
         SharedPreferences settings = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         if(settings !=null)
         {
-     	   isSoundOn = settings.getBoolean(PREFS_SOUND, true);
+     	   isSoundOn = settings.getBoolean(PREFS_SOUND, false);
      	   mBallsThread.setSoundState(isSoundOn);
      	   
-     	   isAccelOn = settings.getBoolean(PREFS_ACCEL, false);
+     	   isAccelOn = settings.getBoolean(PREFS_ACCEL, true);
      	   if(!isAccelOn) mBallsThread.setAccelerometer(false);
      	   
      	   mBallsState = settings.getInt(PREFS_BALLS, 2);
