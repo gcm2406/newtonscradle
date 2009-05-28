@@ -31,7 +31,7 @@ public class NewtonsBalls extends Activity {
     private static final int MENU_EXIT = 3;
     private static final int DIALOG_WELCOME=0;
     private boolean isSoundOn = false;
-    private boolean isAccelOn = true;
+    private boolean isAccelOn = false;
     private boolean isOrientNormal = true;
     private int mBallsState = 2;
     private static final String PREFS_NAME ="GYUNEWTON";
@@ -167,7 +167,7 @@ public class NewtonsBalls extends Activity {
      	   isSoundOn = settings.getBoolean(PREFS_SOUND, false);
      	   mBallsThread.setSoundState(isSoundOn);
      	   
-     	   isAccelOn = settings.getBoolean(PREFS_ACCEL, true);
+     	   isAccelOn = settings.getBoolean(PREFS_ACCEL, false);
      	   if(!isAccelOn) mBallsThread.setAccelerometer(false);
      	   
      	   mBallsState = settings.getInt(PREFS_BALLS, 2);
