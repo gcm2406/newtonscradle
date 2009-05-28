@@ -8,8 +8,10 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.hardware.SensorManager;
+import android.media.AudioManager;
 import android.os.Bundle;
 import android.os.PowerManager;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
@@ -229,4 +231,21 @@ public class NewtonsBalls extends Activity {
            editor.commit();
         }
     }
+    
+	/*** Capture Back Button and use for browser back, else quit ****/
+	public boolean onKeyDown(int keyCode, KeyEvent event) 
+	{
+		if(keyCode == KeyEvent.KEYCODE_VOLUME_UP)
+		{
+        	try{((AudioManager)getSystemService(Context.AUDIO_SERVICE)).adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI);}catch(Exception e){}
+			return true;
+		}else if(keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)
+		{
+        	try{((AudioManager)getSystemService(Context.AUDIO_SERVICE)).adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI);}catch(Exception e){}
+			return true;
+		}else //not back button or no history to go back to
+		{
+			return super.onKeyDown(keyCode, event);
+		}
+	}
 }
