@@ -7,6 +7,7 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
+import android.hardware.Sensor;
 import android.hardware.SensorManager;
 import android.media.AudioManager;
 import android.os.Bundle;
@@ -87,7 +88,7 @@ public class NewtonsBalls extends Activity {
     		}else
     		{
         		mSensorManager.registerListener(mBallsThread,
-                        SensorManager.SENSOR_ACCELEROMETER,
+        				mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
                         SensorManager.SENSOR_DELAY_UI);
         		mBallsThread.setAccelerometer(true);
         		isAccelOn=true;
@@ -118,6 +119,18 @@ public class NewtonsBalls extends Activity {
         return false;
     }
 
+    @Override
+    public boolean onMenuOpened(int featureId, Menu menu) {
+    	mBallsThread.doPause();
+    	return super.onMenuOpened(featureId, menu);
+    }
+    
+    @Override
+    public void onPanelClosed(int featureId, Menu menu) {
+    	mBallsThread.doStart();
+    	super.onPanelClosed(featureId, menu);
+    }
+    
 	protected Dialog onCreateDialog(int id) {
 		if(id == DIALOG_WELCOME)
 		{
@@ -182,9 +195,9 @@ public class NewtonsBalls extends Activity {
         
         if(isAccelOn)
         {
-	        mSensorManager.registerListener(mBallsThread,
-	                SensorManager.SENSOR_ACCELEROMETER,
-	                SensorManager.SENSOR_DELAY_UI);
+    		mSensorManager.registerListener(mBallsThread,
+    				mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
+                    SensorManager.SENSOR_DELAY_UI);
         }
         
         mBallsThread.doStart();

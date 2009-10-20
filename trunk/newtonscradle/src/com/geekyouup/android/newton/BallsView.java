@@ -10,9 +10,11 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
-import android.hardware.SensorListener;
-import android.hardware.SensorManager;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
 import android.media.AudioManager;
 import android.media.SoundPool;
 import android.util.AttributeSet;
@@ -27,13 +29,7 @@ import android.view.View;
  * View that draws, takes touch input.
  */
 class BallsView extends SurfaceView implements SurfaceHolder.Callback {
-    class BallsThread extends Thread implements SensorListener, OnTouchListener{
-        /*
-         * State-tracking constants
-         */
-        public static final int STATE_PAUSE = 2;
-        public static final int STATE_READY = 3;
-        public static final int STATE_RUNNING = 4;
+    class BallsThread extends Thread implements SensorEventListener, OnTouchListener{
 
         /** What to draw for the Lander when it has crashed */
         private Drawable mBall;
@@ -50,7 +46,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         int mNumberOfBalls = 5;
         final int mFixedBallWidth = 56;
         //rot centers should be calculated based on number of balls, currently hardcoded = bad
-        private final int[] mCenterOfRotationX=new int[]{240-mFixedBallWidth*2,240-mFixedBallWidth,240,240+mFixedBallWidth,240+mFixedBallWidth*2};
+        private int[] mCenterOfRotationX=new int[]{240-mFixedBallWidth*2,240-mFixedBallWidth,240,240+mFixedBallWidth,240+mFixedBallWidth*2};
         private int mCenterOfRotationY=39;//
         private int[] mBallCenterX=new int[mNumberOfBalls];//{100};
         private int[] mBallCenterY=new int[mNumberOfBalls];//{220};
@@ -83,6 +79,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         private int clockState = 0; //0=off, 1=on, 2=onballs
         private Context mContext;
         private NewtonsBalls mApp;
+        private Rect mFullScreenRect;// = new Rect(0,0,getWidth(),getHeight());
         
         public BallsThread(SurfaceHolder surfaceHolder, Context app) {
             // get handles to some important objects
@@ -90,12 +87,17 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
             mContext = app;
 
             Resources res = mContext.getResources();
-            mBall = mContext.getResources().getDrawable(R.drawable.ball2);
+            mBall = res.getDrawable(R.drawable.ball2);
             mBackgroundImage = BitmapFactory.decodeResource(res,R.drawable.background);
             mBallWidth = mBall.getIntrinsicWidth();
             mBallHeight = mBall.getIntrinsicHeight();
             mBallHalfWidth = mBallWidth/2;
 
+            int width = getWidth()<=0?480:getWidth();
+            int halfScreen = width/2;
+            mCenterOfRotationX=new int[]{halfScreen-mFixedBallWidth*2,halfScreen-mFixedBallWidth,halfScreen,halfScreen+mFixedBallWidth,halfScreen+mFixedBallWidth*2};
+            mFullScreenRect = new Rect(0,0,width<=0?480:width,getHeight()<=0?320:getHeight());
+            
             //the Paint object to paint the strings
             mLinePaint = new Paint();
             mLinePaint.setAntiAlias(true);
@@ -182,7 +184,12 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         }
 
         /* Callback invoked when the surface dimensions change. */
-        public void setSurfaceSize(int width, int height) {}
+        public void setSurfaceSize(int width, int height)
+        {
+        	int halfScreen = getWidth()/2;
+            mCenterOfRotationX=new int[]{halfScreen-mFixedBallWidth*2,halfScreen-mFixedBallWidth,halfScreen,halfScreen+mFixedBallWidth,halfScreen+mFixedBallWidth*2};
+            mFullScreenRect = new Rect(0,0,getWidth(),getHeight());
+        }
 
         /**
          * Draws the ship, fuel/speed bars, and background to the provided
@@ -242,7 +249,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         private void doDraw(Canvas canvas) {
             // Draw the background image. Operations on the Canvas accumulate
             // so this is like clearing the screen.
-        	canvas.drawBitmap(mBackgroundImage, 0, 0, null);
+        	canvas.drawBitmap(mBackgroundImage, null,mFullScreenRect, null);
         	
         	if(clockState>0) updateClock();
         	int extraRotation = isOrientNormal?180:0;
@@ -431,7 +438,9 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         	this.isOrientNormal=isOrientNormal;
             Matrix matrix = new Matrix();
             matrix.postRotate(180);
-            mBackgroundImage = Bitmap.createBitmap(mBackgroundImage, 0, 0,480, 320, matrix, false); 
+            
+            float ratio = (float)getWidth()/(getHeight());
+            mBackgroundImage = Bitmap.createBitmap(mBackgroundImage, 0, 0,(int) (320*ratio), 320, matrix, false); 
             if(isOrientNormal)
             {
             	mCenterOfRotationY = 39;
@@ -448,23 +457,24 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         	if(!on) angleOfGravityVelocity=PI_F;
         }
         
-    	public void onAccuracyChanged(int arg0, int arg1) {}
+    	public void onAccuracyChanged(Sensor arg0, int arg1) {}
     	//see if sensor has changed
-    	public void onSensorChanged(int sensor, float[] values) {
+    	public void onSensorChanged(SensorEvent event) {
+    		
+    		float[] values = event.values;
     		//accelermetion sensor
-    		if(sensor == SensorManager.SENSOR_ACCELEROMETER)
+    		if(event.sensor.getType() == Sensor.TYPE_ACCELEROMETER)
     		{
     			//had to switch these round after going landscape
-    			float gravityOffsetX = (isOrientNormal?-values[3]:values[3]); //use non orientation effected values
-    			float gravityOffsetY = (isOrientNormal?values[4]:-values[4]);
+    			float gravityOffsetX = (isOrientNormal?values[0]:-values[0]); //use non orientation effected values
+    			float gravityOffsetY = (isOrientNormal?-values[1]:values[1]);
 
     			//sort out the changed angle of gravity, the Y Offset switch is due to the graph of tan(theta) jumping
     			if(gravityOffsetY>0) angleOfGravityVelocity = ((float) (-Math.atan(gravityOffsetX/gravityOffsetY))-HALF_PI_F);
     			else angleOfGravityVelocity = ((float) (-Math.atan(gravityOffsetX/gravityOffsetY))+HALF_PI_F);
      		}
     	}
-
-     	
+    	
 		public boolean onTouch(View v, MotionEvent event) {
 			if(event.getAction() == MotionEvent.ACTION_DOWN)
 			{
