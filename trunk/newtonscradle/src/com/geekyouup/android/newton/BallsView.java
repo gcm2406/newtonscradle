@@ -19,6 +19,7 @@ import android.media.AudioManager;
 import android.media.SoundPool;
 import android.util.AttributeSet;
 import android.util.FloatMath;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -59,7 +60,8 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         final float g=40;//SensorManager.STANDARD_GRAVITY;  // gravitational acceleration parameter
         
        	private boolean mObjectTouched = false;
-    	private int mObjectTouchedId =-1;
+       	private int[] mObjectsTouchedIds = new int[2]; 
+    	//private int mObjectTouchedId =-1;
     	private boolean isSoundOn = false;
     	private boolean isOrientNormal=true; //rotate around so we can stand device on surface
     	private boolean mFastMode = true;
@@ -304,7 +306,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
     		for(int i=0;i<mNumberOfBalls;i++)
     		{
 	        	//physics of the balls for ones not being controlled by touch
-        		boolean objectControlledByTouch = (mObjectTouched && mObjectTouchedId==i);
+        		boolean objectControlledByTouch = (mObjectTouched && (mObjectsTouchedIds[0]==i || mObjectsTouchedIds[1]==i));
     		    if(!objectControlledByTouch)
     			{
 		            float elapsed = 0.025f;//(now-mLastTime);
@@ -358,7 +360,7 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         			}
         			
         			//for 2 balls to collide they must be at the same angle, fix overlaps by doing this.
-        			if(mObjectTouched && mObjectTouchedId==testBall) //ball being touch dragged overrides angles
+        			if(mObjectTouched && (mObjectsTouchedIds[0]==testBall || mObjectsTouchedIds[1]==testBall)) //ball being touch dragged overrides angles
         			{
         				mBallAngle[j] = mBallAngle[testBall];
         				mBallVelocity[testBall]=0;
@@ -366,7 +368,9 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         				       				
     		        	mBallCenterX[j] = calcXCoordOfBall(j); 
     		        	mBallCenterY[j] = calcYCoordOfBall(j);
-        			}else if(mObjectTouched && (mObjectTouchedId==j || (mObjectTouchedId<j && Math.abs(mBallAngle[mObjectTouchedId]-mBallAngle[j])<0.1)))
+        			}else if(mObjectTouched 
+        					&& ((mObjectsTouchedIds[0]==j || (mObjectsTouchedIds[0]!=-1 && mObjectsTouchedIds[0]<j && Math.abs(mBallAngle[mObjectsTouchedIds[0]]-mBallAngle[j])<0.1))
+        					|| (mObjectsTouchedIds[1]==j || (mObjectsTouchedIds[1]!=-1 && mObjectsTouchedIds[1]<j && Math.abs(mBallAngle[mObjectsTouchedIds[1]]-mBallAngle[j])<0.1))))
         			{
         				mBallAngle[testBall] = mBallAngle[j];
         				mBallVelocity[testBall] = 0;
@@ -439,7 +443,12 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
             Matrix matrix = new Matrix();
             matrix.postRotate(180);
             
-            float ratio = (float)getWidth()/(getHeight());
+            int height = getHeight();
+            int width = getWidth();
+            if(height<=0) height=320;
+            if(width<=0) width=480;
+            
+            float ratio = ((float)width/height);
             mBackgroundImage = Bitmap.createBitmap(mBackgroundImage, 0, 0,(int) (320*ratio), 320, matrix, false); 
             if(isOrientNormal)
             {
@@ -476,11 +485,13 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
     	}
     	
 		public boolean onTouch(View v, MotionEvent event) {
-			if(event.getAction() == MotionEvent.ACTION_DOWN)
-			{
-				float touchX = event.getX();
-				float touchY = event.getY();
+			int numPointers = event.getPointerCount();
+			//Log.d("Newtons","NUMBER OF TOUCHS " + numPointers + " ACTION: " + event.getAction());
 				
+			if(event.getAction() == MotionEvent.ACTION_DOWN || event.getAction() == MotionEvent.ACTION_POINTER_1_DOWN || event.getAction() == MotionEvent.ACTION_POINTER_DOWN)
+			{
+				float touchX = event.getX(0);
+				float touchY = event.getY(0);
 				if((isOrientNormal && touchY>290) || (!isOrientNormal&&touchY<30)) 
 				{
 					clockState = (clockState+1)%3;
@@ -497,35 +508,71 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
 						{
 							//if so set flag and id of ball touched
 							mObjectTouched=true;
-							mObjectTouchedId = i;
-							return true;
+							mObjectsTouchedIds[0] = i;
+							break;
 						}
 					}
 				}
-			}else if(event.getAction() == MotionEvent.ACTION_MOVE)
+			}else if(event.getAction() == MotionEvent.ACTION_POINTER_2_DOWN)
 			{
-				if(mObjectTouched)
+				float touchX = event.getX(1);
+				float touchY = event.getY(1);
+				if((isOrientNormal && touchY>290) || (!isOrientNormal&&touchY<30)) 
 				{
-					mBallVelocity[mObjectTouchedId]=0;
-					
-					//translate the roational origin
-					float transX = event.getX()-mCenterOfRotationX[mObjectTouchedId];
-					float transY = event.getY()-mCenterOfRotationY;
-					if(!isOrientNormal) {transX=-transX; transY=-transY;}
-					
-					//figure out the angle the ball is now at
-	    			if(transY>0) mBallAngle[mObjectTouchedId] = ((float) (-Math.atan(transX/transY))+PI_F);
-	    			else mBallAngle[mObjectTouchedId] = (float) -Math.atan((transX/transY));
+					clockState = (clockState+1)%3;
+					if(mApp!=null)mApp.saveClockState(clockState);
+				}
+				else
+				{
+					//has the user touched a ball?
+					for(int i=0;i<mNumberOfBalls;i++)
+					{
+						//the ball is currently covers mBallX, mBallY to mBallX+mBallWidth, mBallY+mBallHeight
+						if(touchX>=mBallCenterX[i]-mBallHalfWidth && touchX<=(mBallCenterX[i]+mBallHalfWidth)
+							&& touchY>=mBallCenterY[i]-mBallHalfWidth && touchY <= (mBallCenterY[i]+mBallHalfWidth))
+						{
+							//if so set flag and id of ball touched
+							mObjectTouched=true;
+							mObjectsTouchedIds[1] = i;
+							break;
+						}
+					}
+				}
+			}
+			else if(event.getAction() == MotionEvent.ACTION_MOVE)
+			{
+				for(int p=0;p<numPointers;p++)
+				{
+					if(mObjectTouched && mObjectsTouchedIds[p]!=-1)
+					{
+						mBallVelocity[mObjectsTouchedIds[p]]=0;
+						
+						//translate the roational origin
+						float transX = event.getX(p)-mCenterOfRotationX[mObjectsTouchedIds[p]];
+						float transY = event.getY(p)-mCenterOfRotationY;
 
-	    			return true;
+						if(!isOrientNormal) {transX=-transX; transY=-transY;}
+						
+						//figure out the angle the ball is now at
+		    			if(transY>0) mBallAngle[mObjectsTouchedIds[p]] = ((float) (-Math.atan(transX/transY))+PI_F);
+		    			else mBallAngle[mObjectsTouchedIds[p]] = (float) -Math.atan((transX/transY));
+					}
 				}
-			}else if(event.getAction()==MotionEvent.ACTION_UP)
+			}else if(event.getAction()==MotionEvent.ACTION_UP || event.getAction()==MotionEvent.ACTION_POINTER_UP || event.getAction() == MotionEvent.ACTION_POINTER_1_UP)
 			{
-				if(mObjectTouched)
-				{
-					mObjectTouched=false;
-					return true;
-				}
+				mObjectsTouchedIds[0] = -1;
+				if(mObjectTouched && mObjectsTouchedIds[0]==-1 && mObjectsTouchedIds[1]==-1) mObjectTouched=false;
+			}else if(event.getAction() == MotionEvent.ACTION_POINTER_2_UP)
+			{
+				mObjectsTouchedIds[1] = -1;
+				if(mObjectTouched && mObjectsTouchedIds[0]==-1 && mObjectsTouchedIds[1]==-1) mObjectTouched=false;
+			}
+
+			if(numPointers==1 && (event.getAction()==MotionEvent.ACTION_UP || event.getAction()==MotionEvent.ACTION_POINTER_UP)) 
+			{
+				mObjectTouched=false;
+				mObjectsTouchedIds[0]=-1;
+				mObjectsTouchedIds[1]=-1;
 			}
 			return true;
 		}
