@@ -1,5 +1,6 @@
 package com.geekyouup.android.newton;
 
+import java.lang.reflect.Method;
 import java.util.Calendar;
 import java.util.HashMap;
 
@@ -82,6 +83,13 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         private Context mContext;
         private NewtonsBalls mApp;
         private Rect mFullScreenRect;// = new Rect(0,0,getWidth(),getHeight());
+        
+        private static final int ACTION_POINTER_1_DOWN = 5; //backwards compatibility
+        private static final int ACTION_POINTER_1_UP = 6; //backwards compatibility
+        private static final int ACTION_POINTER_DOWN = 5; //backwards compatibility
+        private static final int ACTION_POINTER_2_DOWN = 261;//backwards compatibility
+        private static final int ACTION_POINTER_2_UP = 262;//backwards compatibility
+        private static final int ACTION_POINTER_UP = 6; //backwards compatibility
         
         public BallsThread(SurfaceHolder surfaceHolder, Context app) {
             // get handles to some important objects
@@ -439,26 +447,22 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
         
         public void setOrientation(boolean isOrientNormal)
         {
-        	this.isOrientNormal=isOrientNormal;
-            Matrix matrix = new Matrix();
-            matrix.postRotate(180);
-            
-            int height = getHeight();
-            int width = getWidth();
-            if(height<=0) height=320;
-            if(width<=0) width=480;
-            
-            float ratio = ((float)width/height);
-            mBackgroundImage = Bitmap.createBitmap(mBackgroundImage, 0, 0,(int) (320*ratio), 320, matrix, false); 
-            if(isOrientNormal)
-            {
-            	mCenterOfRotationY = 39;
-            	mStringLength=180;
-            }else
-            {
-            	mCenterOfRotationY = 320-39;
-            	mStringLength=-180;
-            }
+        	try
+        	{
+	        	this.isOrientNormal=isOrientNormal;
+	            Matrix matrix = new Matrix();
+	            matrix.postRotate(180);
+	            mBackgroundImage = Bitmap.createBitmap(mBackgroundImage, 0, 0,mBackgroundImage.getWidth(), mBackgroundImage.getHeight(), matrix, false); 
+	            if(isOrientNormal)
+	            {
+	            	mCenterOfRotationY = 39;
+	            	mStringLength=180;
+	            }else
+	            {
+	            	mCenterOfRotationY = 320-39;
+	            	mStringLength=-180;
+	            }
+        	}catch(Exception e){}
         }
         
         public void setAccelerometer(boolean on)
@@ -485,94 +489,150 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
     	}
     	
 		public boolean onTouch(View v, MotionEvent event) {
-			int numPointers = event.getPointerCount();
 			//Log.d("Newtons","NUMBER OF TOUCHS " + numPointers + " ACTION: " + event.getAction());
-				
-			if(event.getAction() == MotionEvent.ACTION_DOWN || event.getAction() == MotionEvent.ACTION_POINTER_1_DOWN || event.getAction() == MotionEvent.ACTION_POINTER_DOWN)
+			//Android < 2.0
+			if(Double.parseDouble(android.os.Build.VERSION.SDK)<5)
 			{
-				float touchX = event.getX(0);
-				float touchY = event.getY(0);
-				if((isOrientNormal && touchY>290) || (!isOrientNormal&&touchY<30)) 
+				if(event.getAction() == MotionEvent.ACTION_DOWN)
 				{
-					clockState = (clockState+1)%3;
-					if(mApp!=null)mApp.saveClockState(clockState);
-				}
-				else
-				{
-					//has the user touched a ball?
-					for(int i=0;i<mNumberOfBalls;i++)
+					float touchX = event.getX();
+					float touchY = event.getY();
+					
+					if((isOrientNormal && touchY>290) || (!isOrientNormal&&touchY<30)) 
 					{
-						//the ball is currently covers mBallX, mBallY to mBallX+mBallWidth, mBallY+mBallHeight
-						if(touchX>=mBallCenterX[i]-mBallHalfWidth && touchX<=(mBallCenterX[i]+mBallHalfWidth)
-							&& touchY>=mBallCenterY[i]-mBallHalfWidth && touchY <= (mBallCenterY[i]+mBallHalfWidth))
+						clockState = (clockState+1)%3;
+						if(mApp!=null)mApp.saveClockState(clockState);
+					}
+					else
+					{
+						//has the user touched a ball?
+						for(int i=0;i<mNumberOfBalls;i++)
 						{
-							//if so set flag and id of ball touched
-							mObjectTouched=true;
-							mObjectsTouchedIds[0] = i;
-							break;
+							//the ball is currently covers mBallX, mBallY to mBallX+mBallWidth, mBallY+mBallHeight
+							if(touchX>=mBallCenterX[i]-mBallHalfWidth && touchX<=(mBallCenterX[i]+mBallHalfWidth)
+								&& touchY>=mBallCenterY[i]-mBallHalfWidth && touchY <= (mBallCenterY[i]+mBallHalfWidth))
+							{
+								//if so set flag and id of ball touched
+								mObjectTouched=true;
+								mObjectsTouchedIds[0] = i;
+								return true;
+							}
 						}
 					}
-				}
-			}else if(event.getAction() == MotionEvent.ACTION_POINTER_2_DOWN)
-			{
-				float touchX = event.getX(1);
-				float touchY = event.getY(1);
-				if((isOrientNormal && touchY>290) || (!isOrientNormal&&touchY<30)) 
+				}else if(event.getAction() == MotionEvent.ACTION_MOVE)
 				{
-					clockState = (clockState+1)%3;
-					if(mApp!=null)mApp.saveClockState(clockState);
-				}
-				else
-				{
-					//has the user touched a ball?
-					for(int i=0;i<mNumberOfBalls;i++)
+					if(mObjectTouched)
 					{
-						//the ball is currently covers mBallX, mBallY to mBallX+mBallWidth, mBallY+mBallHeight
-						if(touchX>=mBallCenterX[i]-mBallHalfWidth && touchX<=(mBallCenterX[i]+mBallHalfWidth)
-							&& touchY>=mBallCenterY[i]-mBallHalfWidth && touchY <= (mBallCenterY[i]+mBallHalfWidth))
-						{
-							//if so set flag and id of ball touched
-							mObjectTouched=true;
-							mObjectsTouchedIds[1] = i;
-							break;
-						}
-					}
-				}
-			}
-			else if(event.getAction() == MotionEvent.ACTION_MOVE)
-			{
-				for(int p=0;p<numPointers;p++)
-				{
-					if(mObjectTouched && mObjectsTouchedIds[p]!=-1)
-					{
-						mBallVelocity[mObjectsTouchedIds[p]]=0;
+						mBallVelocity[mObjectsTouchedIds[0]]=0;
 						
 						//translate the roational origin
-						float transX = event.getX(p)-mCenterOfRotationX[mObjectsTouchedIds[p]];
-						float transY = event.getY(p)-mCenterOfRotationY;
-
+						float transX = event.getX()-mCenterOfRotationX[mObjectsTouchedIds[0]];
+						float transY = event.getY()-mCenterOfRotationY;
 						if(!isOrientNormal) {transX=-transX; transY=-transY;}
 						
 						//figure out the angle the ball is now at
-		    			if(transY>0) mBallAngle[mObjectsTouchedIds[p]] = ((float) (-Math.atan(transX/transY))+PI_F);
-		    			else mBallAngle[mObjectsTouchedIds[p]] = (float) -Math.atan((transX/transY));
+		    			if(transY>0) mBallAngle[mObjectsTouchedIds[0]] = ((float) (-Math.atan(transX/transY))+PI_F);
+		    			else mBallAngle[mObjectsTouchedIds[0]] = (float) -Math.atan((transX/transY));
+	
+		    			return true;
+					}
+				}else if(event.getAction()==MotionEvent.ACTION_UP)
+				{
+					if(mObjectTouched)
+					{
+						mObjectTouched=false;
+						return true;
 					}
 				}
-			}else if(event.getAction()==MotionEvent.ACTION_UP || event.getAction()==MotionEvent.ACTION_POINTER_UP || event.getAction() == MotionEvent.ACTION_POINTER_1_UP)
+			}else
 			{
-				mObjectsTouchedIds[0] = -1;
-				if(mObjectTouched && mObjectsTouchedIds[0]==-1 && mObjectsTouchedIds[1]==-1) mObjectTouched=false;
-			}else if(event.getAction() == MotionEvent.ACTION_POINTER_2_UP)
-			{
-				mObjectsTouchedIds[1] = -1;
-				if(mObjectTouched && mObjectsTouchedIds[0]==-1 && mObjectsTouchedIds[1]==-1) mObjectTouched=false;
-			}
-
-			if(numPointers==1 && (event.getAction()==MotionEvent.ACTION_UP || event.getAction()==MotionEvent.ACTION_POINTER_UP)) 
-			{
-				mObjectTouched=false;
-				mObjectsTouchedIds[0]=-1;
-				mObjectsTouchedIds[1]=-1;
+				int numPointers = reflectPointerCount(event);
+				if(event.getAction() == MotionEvent.ACTION_DOWN || event.getAction() == ACTION_POINTER_1_DOWN || event.getAction() == ACTION_POINTER_DOWN)
+				{
+					float touchX = reflectGetXForPointer(event, 0);//event.getX(0);
+					float touchY = reflectGetYForPointer(event, 0);//event.getY(0);
+					if((isOrientNormal && touchY>290) || (!isOrientNormal&&touchY<30)) 
+					{
+						clockState = (clockState+1)%3;
+						if(mApp!=null)mApp.saveClockState(clockState);
+					}
+					else
+					{
+						//has the user touched a ball?
+						for(int i=0;i<mNumberOfBalls;i++)
+						{
+							//the ball is currently covers mBallX, mBallY to mBallX+mBallWidth, mBallY+mBallHeight
+							if(touchX>=mBallCenterX[i]-mBallHalfWidth && touchX<=(mBallCenterX[i]+mBallHalfWidth)
+								&& touchY>=mBallCenterY[i]-mBallHalfWidth && touchY <= (mBallCenterY[i]+mBallHalfWidth))
+							{
+								//if so set flag and id of ball touched
+								mObjectTouched=true;
+								mObjectsTouchedIds[0] = i;
+								break;
+							}
+						}
+					}
+				}else if(event.getAction() == ACTION_POINTER_2_DOWN)
+				{
+					float touchX = reflectGetXForPointer(event, 1);//event.getX(1);
+					float touchY = reflectGetYForPointer(event, 1);//event.getY(1);
+					if((isOrientNormal && touchY>290) || (!isOrientNormal&&touchY<30)) 
+					{
+						clockState = (clockState+1)%3;
+						if(mApp!=null)mApp.saveClockState(clockState);
+					}
+					else
+					{
+						//has the user touched a ball?
+						for(int i=0;i<mNumberOfBalls;i++)
+						{
+							//the ball is currently covers mBallX, mBallY to mBallX+mBallWidth, mBallY+mBallHeight
+							if(touchX>=mBallCenterX[i]-mBallHalfWidth && touchX<=(mBallCenterX[i]+mBallHalfWidth)
+								&& touchY>=mBallCenterY[i]-mBallHalfWidth && touchY <= (mBallCenterY[i]+mBallHalfWidth))
+							{
+								//if so set flag and id of ball touched
+								mObjectTouched=true;
+								mObjectsTouchedIds[1] = i;
+								break;
+							}
+						}
+					}
+				}
+				else if(event.getAction() == MotionEvent.ACTION_MOVE)
+				{
+					for(int p=0;p<numPointers;p++)
+					{
+						if(mObjectTouched && mObjectsTouchedIds[p]!=-1)
+						{
+							mBallVelocity[mObjectsTouchedIds[p]]=0;
+							
+							//translate the roational origin
+							float transX = reflectGetXForPointer(event, p)-mCenterOfRotationX[mObjectsTouchedIds[p]];//event.getX(p)-mCenterOfRotationX[mObjectsTouchedIds[p]];
+							float transY = reflectGetYForPointer(event, p)-mCenterOfRotationY;//event.getY(p)-mCenterOfRotationY;
+	
+							if(!isOrientNormal) {transX=-transX; transY=-transY;}
+							
+							//figure out the angle the ball is now at
+			    			if(transY>0) mBallAngle[mObjectsTouchedIds[p]] = ((float) (-Math.atan(transX/transY))+PI_F);
+			    			else mBallAngle[mObjectsTouchedIds[p]] = (float) -Math.atan((transX/transY));
+						}
+					}
+				}else if(event.getAction()==MotionEvent.ACTION_UP || event.getAction()==ACTION_POINTER_UP || event.getAction() == ACTION_POINTER_1_UP)
+				{
+					mObjectsTouchedIds[0] = -1;
+					if(mObjectTouched && mObjectsTouchedIds[0]==-1 && mObjectsTouchedIds[1]==-1) mObjectTouched=false;
+				}else if(event.getAction() == ACTION_POINTER_2_UP)
+				{
+					mObjectsTouchedIds[1] = -1;
+					if(mObjectTouched && mObjectsTouchedIds[0]==-1 && mObjectsTouchedIds[1]==-1) mObjectTouched=false;
+				}
+	
+				if(numPointers==1 && (event.getAction()==MotionEvent.ACTION_UP || event.getAction()==ACTION_POINTER_UP)) 
+				{
+					mObjectTouched=false;
+					mObjectsTouchedIds[0]=-1;
+					mObjectsTouchedIds[1]=-1;
+				}
 			}
 			return true;
 		}
@@ -638,6 +698,46 @@ class BallsView extends SurfaceView implements SurfaceHolder.Callback {
                 retry = false;
             } catch (InterruptedException e) {}
         }
+    }
+    
+    private int reflectPointerCount(MotionEvent event)
+    {
+    	int pointerCount = -1;
+    	try
+    	{
+			Method methodGetInstance = event.getClass().getDeclaredMethod("getPointerCount");
+			Object pointerCountObj = methodGetInstance.invoke(event);
+			pointerCount = (Integer) pointerCountObj;
+    	}catch(Exception e)
+    	{
+    		Log.d("Balls","Excption on reflectPointerCount",e);
+    	}
+		return pointerCount;
+    }
+    
+    private float reflectGetXForPointer(MotionEvent event, int pointer)
+    {
+    	return reflectGetPosForPointer(event, pointer, "getX");
+    }
+    
+    private float reflectGetYForPointer(MotionEvent event, int pointer)
+    {
+    	return reflectGetPosForPointer(event, pointer, "getY");
+    }
+    
+    private float reflectGetPosForPointer(MotionEvent event, int pointer, String method)
+    {
+    	float xVal = -1;
+    	try
+    	{
+			Method methodGetX = event.getClass().getDeclaredMethod(method, Integer.TYPE);
+			Object pointerCountObj = methodGetX.invoke(event, pointer);
+			xVal = (Float) pointerCountObj;
+    	}catch(Exception e)
+    	{
+    		Log.d("Balls","Excption on reflectGetPosForPointer",e);
+    	}
+		return xVal;
     }
     
 }
